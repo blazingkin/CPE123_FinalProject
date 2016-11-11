@@ -30,12 +30,14 @@
 
 
 ;;This is called on all of the nodes in the chain when another node is added
+;; Markov Node -> Markov Node
 (define (node-alert-chain-add node)
   (make-markov-node (markov-node-value node)
                     (normalize-node (append (markov-node-connections node) (list (random)))))
   )
 
 ;;Takes a list of connection strengths and returns a normalized list of connection strengths
+;; List of Numbers -> List of Numbers (whose sum is 1)
 (define (normalize-node connections)
   (get-normalized connections (sum-of-list connections)))
 
@@ -44,6 +46,8 @@
     [(empty? connections) '()]
     [else (cons (/ (first connections) sum) (get-normalized (rest connections) sum))]))
 
+;; Gets the sum of all elements in a list
+;; List of Numbers -> Number
 (define (sum-of-list list)
   (cond
     [(empty? list) 0]
@@ -51,11 +55,13 @@
     ))
 
 ;;Takes a chain and returns the same chain with current-node changed to be the new one
+;;Markov Chain -> Number
 (define (get-next-node chain)
   (pick-node-based-on-weights (markov-node-connections (list-ref (markov-chain-nodes chain) (markov-chain-current-node chain))) 0 (random))
   )
 
 ;;Call this with the node's weights, 0 and a random floating point number in 0 < rand < 1
+;;Number List, 0, 0 < rand < 1 -> Number
 (define (pick-node-based-on-weights weights inc rand)
   (cond
     [(empty? weights) 0]
@@ -78,6 +84,8 @@
   (add-node-to-chain (make-markov-node 2 '(.2 .25 .5))
   (add-node-to-chain (make-markov-node 1 '(.5 .5))
   (add-node-to-chain (make-markov-node 0 '(1)) (make-markov-chain '() 0))))))
+
+;;The world state of this big bang is a Markov Chain
 (big-bang initial-chain
           [to-draw draw-handler]
-          [on-tick tick-handler])
+          [on-tick tick-handler 1/5])
