@@ -23,10 +23,10 @@
 
 ;;Chain -> Chain with updated nodes
 ;;Alert all nodes of a new node
-(define (alert-all-nodes-add chain)
+(define (alert-all-nodes-add list)
   (cond
-    [(empty? chain) '()]
-    [else (cons (node-alert-chain-add (first chain)) (alert-all-nodes-add (rest chain)))]))
+    [(empty? list) '()]
+    [else (cons (node-alert-chain-add (first list)) (alert-all-nodes-add (rest list)))]))
 
 
 ;;This is called on all of the nodes in the chain when another node is added
@@ -78,6 +78,8 @@
   (add-node-to-chain (make-markov-node 2 '(.2 .25 .5))
   (add-node-to-chain (make-markov-node 1 '(.5 .5))
   (add-node-to-chain (make-markov-node 0 '(1)) (make-markov-chain '() 0))))))
+
+;;World state is a markov-chain
 (big-bang initial-chain
           [to-draw draw-handler]
-          [on-tick tick-handler])
+          [on-tick tick-handler 1/3])
