@@ -2,6 +2,7 @@
 ;; about the language level of this file in a form that our tools can easily process.
 #reader(lib "htdp-advanced-reader.ss" "lang")((modname FinalProject) (read-case-sensitive #t) (teachpacks ()) (htdp-settings #(#t constructor repeating-decimal #t #t none #f () #f)))
 (require rsound)
+(require rsound/single-cycle)
 (require 2htdp/universe)
 (require 2htdp/image)
 
@@ -93,21 +94,22 @@
     [else (pick-node-based-on-weights (rest weights) (+ 1 inc) (- rand (first weights)))])
   )
 
-
+(define p (make-pstream))
 (define (draw-handler ws)
   (overlay/xy (rectangle 1200 600 "outline" "red")
   200
   200
-  (text (number->string (markov-chain-current-node ws)) 24 "blue")))
+  (both (pstream-queue p (synth-note "main" 35 (markov-node-midi (list-ref (markov-chain-nodes ws) (markov-chain-current-node ws))) (/ FRAME-RATE 5)) (pstream-current-frame p)) 
+   (text (number->string (markov-chain-current-node ws)) 24 "blue"))))
 
 (define (tick-handler ws)
   (make-markov-chain (markov-chain-nodes ws) (get-next-node ws)))
 
 (define initial-chain
-  (add-node-to-chain (make-markov-node 3 '(.25 .25 .25 .25))
-  (add-node-to-chain (make-markov-node 2 '(.2 .25 .5))
-  (add-node-to-chain (make-markov-node 1 '(.5 .5))
-  (add-node-to-chain (make-markov-node 0 '(1)) (make-markov-chain '() 0))))))
+  (add-node-to-chain (make-markov-node 72 '(.25 .25 .25 .25))
+  (add-node-to-chain (make-markov-node 67 '(.2 .25 .5))
+  (add-node-to-chain (make-markov-node 64 '(.5 .5))
+  (add-node-to-chain (make-markov-node 60 '(1)) (make-markov-chain '() 0))))))
 
 ;; The world state of this big bang is a Markov Chain
 (big-bang initial-chain
