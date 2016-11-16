@@ -1,13 +1,14 @@
 ;; The first three lines of this file were inserted by DrRacket. They record metadata
 ;; about the language level of this file in a form that our tools can easily process.
 #reader(lib "htdp-advanced-reader.ss" "lang")((modname FinalProject) (read-case-sensitive #t) (teachpacks ()) (htdp-settings #(#t constructor repeating-decimal #t #t none #f () #f)))
+;; Final Project: Markov Audio Generation
+;; Team "I feel like a tater tot"
+;; Kellie Banzon, Alex Gravenor, Jeffery Ho, Steven Pineda
+
 (require rsound)
 (require rsound/single-cycle)
 (require 2htdp/universe)
 (require 2htdp/image)
-
-
-
 
 ;; More dirty hacks
 (define (both a b) b)
@@ -27,11 +28,21 @@
 
 ;; the markov-map is the graphic interface where all the markov-nodes can be viewed and adjusted
 ;; note: for now, the markov-map is the red rectangular outline and the numbers representing the note
-(define markov-map (rectangle 1200 600 "outline" "red"))
+;; the width and height of the markov-map background
+(define map-width 1200)
+(define map-height 600)
 
-(define map-center-x 600)
-(define map-center-y 300)
+;; the markov-map is the graphic interface where all the markov-nodes can be viewed and adjusted
+;; note: for now, the markov-map is the red rectangular outline and the numbers representing the note
+(define markov-map (rectangle map-width map-height "outline" "red"))
+
+;; the nodes are represented as circles on the markov-map, spaced in a larger circle around some center point
+;; map-center-x and map-center-y define the x- and y-position of this center point
+(define map-center-x (/ map-width 2))
+(define map-center-y (/ map-height 2))
+;; the distance each node sits from the center point
 (define map-radius 200)
+;; the radius of the circle that represents a node
 (define circle-radius 75)
 
 ;; Add a markov-node to a markov-chain
@@ -94,8 +105,8 @@
     [else (+ (first list) (sum-of-list (rest list)))]
     ))
 
-;; Takes a chain and returns the same chain with current-node changed to be the new one
-;; Markov Chain -> Number
+;; updates the current-node index number to reflect the next node and changes the "active" node (and thus changes which node is lit up on the markov-map)
+;; markov-chain -> number
 (define (get-next-node chain)
   (pick-node-based-on-weights (markov-node-connections (list-ref (markov-chain-nodes chain) (markov-chain-current-node chain))) 0 (random))
   )
