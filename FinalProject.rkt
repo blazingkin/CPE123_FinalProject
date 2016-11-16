@@ -19,6 +19,13 @@
 ;; - current-node: a integer value corresponding to the current index of the markov-chain list
 (define-struct markov-chain [nodes current-node])
 
+;; the audio track the notes will be queued into
+(define p (make-pstream))
+
+;; the markov-map is the graphic interface where all the markov-nodes can be viewed and adjusted
+;; note: for now, the markov-map is the red rectangular outline and the numbers representing the note
+(define markov-map (rectangle 1200 600 "outline" "red"))
+
 ;; Add a markov-node to a markov-chain
 ;; node: the markov-node to be added
 ;; chain: the markov-chain to add the markov-node to
@@ -94,24 +101,33 @@
     [else (pick-node-based-on-weights (rest weights) (+ 1 inc) (- rand (first weights)))])
   )
 
-(define p (make-pstream))
+;; draw the background, queue next note to be played at the end of the pstream, and write the note's corresponding number onto the markov-map
+;; the duration of each note is half the FRAME-RATE
 (define (draw-handler ws)
-  (overlay/xy (rectangle 1200 600 "outline" "red")
-  200
-  200
-  (both (pstream-queue p (synth-note "main" 35 (markov-node-midi (list-ref (markov-chain-nodes ws) (markov-chain-current-node ws))) (/ FRAME-RATE 5)) (pstream-current-frame p)) 
-   (text (number->string (markov-chain-current-node ws)) 24 "blue"))))
+  (overlay/xy markov-map
+              200
+              200
+              (write-note-number ws)))
 
+;; writes the number of the note currently playing
+;; in the future, will be updated to change the color of the node currently playing
+;; ------------------------ FINISH ------------------------
+(define (write-note-number ws)
+  (text (number->string (markov-chain-current-node ws)) 24 "blue"))
+
+;; on each clock-tick, create a markov-chain of the nodes already played and pick the next node to be played
 (define (tick-handler ws)
-  (make-markov-chain (markov-chain-nodes ws) (get-next-node ws)))
+  (both (pstream-queue p (synth-note "main" 35 (markov-node-midi (list-ref (markov-chain-nodes ws) (markov-chain-current-node ws))) (/ FRAME-RATE 5)) (pstream-current-frame p))
+        (make-markov-chain (markov-chain-nodes ws) (get-next-node ws))))
 
+;; the initial nodes in the markov-chain
 (define initial-chain
   (add-node-to-chain (make-markov-node 72 '(.25 .25 .25 .25))
-  (add-node-to-chain (make-markov-node 67 '(.2 .25 .5))
-  (add-node-to-chain (make-markov-node 64 '(.5 .5))
-  (add-node-to-chain (make-markov-node 60 '(1)) (make-markov-chain '() 0))))))
+                     (add-node-to-chain (make-markov-node 67 '(.2 .25 .5))
+                                        (add-node-to-chain (make-markov-node 64 '(.5 .5))
+                                                           (add-node-to-chain (make-markov-node 60 '(1)) (make-markov-chain '() 0))))))
 
-;; The world state of this big bang is a Markov Chain
+;; The world state of this big-bang is a markov-chain
 (big-bang initial-chain
           [to-draw draw-handler]
           [on-tick tick-handler 1/5])
