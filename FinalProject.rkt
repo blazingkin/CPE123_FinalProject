@@ -104,16 +104,29 @@
 ;; draw the background, queue next note to be played at the end of the pstream, and write the note's corresponding number onto the markov-map
 ;; the duration of each note is half the FRAME-RATE
 (define (draw-handler ws)
-  (overlay/xy markov-map
-              200
-              200
-              (write-note-number ws)))
+  (draw-circles ws 0)
+  )
 
 ;; writes the number of the note currently playing
 ;; in the future, will be updated to change the color of the node currently playing
 ;; ------------------------ FINISH ------------------------
 (define (write-note-number ws)
   (text (number->string (markov-chain-current-node ws)) 24 "blue"))
+
+(define (draw-circles chain index)
+  (cond
+    [(= index (length (markov-chain-nodes chain))) markov-map]
+    [else (place-image
+           (draw-node (= index (markov-chain-current-node chain)))
+           (+ 200 (* 200 index))
+           200
+           (draw-circles chain (+ 1 index)))]))
+
+
+(define (draw-node active)
+  (circle 50 "solid" (cond
+                       [active "green"]
+                       [else "blue"])))
 
 ;; on each clock-tick, create a markov-chain of the nodes already played and pick the next node to be played
 (define (tick-handler ws)
@@ -123,9 +136,9 @@
 ;; the initial nodes in the markov-chain
 (define initial-chain
   (add-node-to-chain (make-markov-node 72 '(.25 .25 .25 .25))
-                     (add-node-to-chain (make-markov-node 67 '(.2 .25 .5))
-                                        (add-node-to-chain (make-markov-node 64 '(.5 .5))
-                                                           (add-node-to-chain (make-markov-node 60 '(1)) (make-markov-chain '() 0))))))
+  (add-node-to-chain (make-markov-node 67 '(.2 .25 .5))
+  (add-node-to-chain (make-markov-node 64 '(.5 .5))
+  (add-node-to-chain (make-markov-node 60 '(1)) (make-markov-chain '() 0))))))
 
 ;; The world state of this big-bang is a markov-chain
 (big-bang initial-chain
