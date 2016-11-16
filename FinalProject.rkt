@@ -6,6 +6,9 @@
 (require 2htdp/universe)
 (require 2htdp/image)
 
+
+
+
 ;; More dirty hacks
 (define (both a b) b)
 
@@ -25,6 +28,11 @@
 ;; the markov-map is the graphic interface where all the markov-nodes can be viewed and adjusted
 ;; note: for now, the markov-map is the red rectangular outline and the numbers representing the note
 (define markov-map (rectangle 1200 600 "outline" "red"))
+
+(define map-center-x 600)
+(define map-center-y 300)
+(define map-radius 200)
+(define circle-radius 75)
 
 ;; Add a markov-node to a markov-chain
 ;; node: the markov-node to be added
@@ -113,18 +121,25 @@
 (define (write-note-number ws)
   (text (number->string (markov-chain-current-node ws)) 24 "blue"))
 
+(define (calc-circle-x chain index)
+  (+ map-center-x (* map-radius (cos (- (/ (* 2 pi index) (length (markov-chain-nodes chain))) (/ pi 2) ))))
+  )
+(define (calc-circle-y chain index)
+  (+ map-center-y (* map-radius (sin (- (/ (* 2 pi index) (length (markov-chain-nodes chain))) (/ pi 2) ))))
+  )
+
 (define (draw-circles chain index)
   (cond
     [(= index (length (markov-chain-nodes chain))) markov-map]
     [else (place-image
            (draw-node (= index (markov-chain-current-node chain)))
-           (+ 200 (* 200 index))
-           200
+           (calc-circle-x chain index)
+           (calc-circle-y chain index)
            (draw-circles chain (+ 1 index)))]))
 
 
 (define (draw-node active)
-  (circle 50 "solid" (cond
+  (circle circle-radius "solid" (cond
                        [active "green"]
                        [else "blue"])))
 
@@ -135,10 +150,12 @@
 
 ;; the initial nodes in the markov-chain
 (define initial-chain
+  (add-node-to-chain (make-markov-node 79 '(.1 .1 .1 .1 .1 .5))
+  (add-node-to-chain (make-markov-node 76 '(.2 .2 .2 .2 .2))
   (add-node-to-chain (make-markov-node 72 '(.25 .25 .25 .25))
   (add-node-to-chain (make-markov-node 67 '(.2 .25 .5))
   (add-node-to-chain (make-markov-node 64 '(.5 .5))
-  (add-node-to-chain (make-markov-node 60 '(1)) (make-markov-chain '() 0))))))
+  (add-node-to-chain (make-markov-node 60 '(1)) (make-markov-chain '() 0))))))))
 
 ;; The world state of this big-bang is a markov-chain
 (big-bang initial-chain
