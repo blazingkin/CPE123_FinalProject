@@ -12,6 +12,7 @@
 
 ;; More dirty hacks
 (define (both a b) b)
+(define (invboth a b) a)
 
 ;; A markov-node has
 ;; - midi: a integer value that corresponds to a MIDI note number
@@ -34,7 +35,7 @@
 
 ;; the markov-map is the graphic interface where all the markov-nodes can be viewed and adjusted
 ;; note: for now, the markov-map is the red rectangular outline and the numbers representing the note
-(define markov-map (rectangle map-width map-height "outline" "red"))
+(define markov-map (rectangle map-width map-height "outline" "white"))
 
 ;; the nodes are represented as circles on the markov-map, spaced in a larger circle around some center point
 ;; map-center-x and map-center-y define the x- and y-position of this center point
@@ -44,6 +45,12 @@
 (define map-radius 200)
 ;; the radius of the circle that represents a node
 (define circle-radius 75)
+
+;;The list of midi note names in order
+(define midi-names '("C" "C#" "D" "D#" "E" "F" "F#" "G" "G#" "A" "A#" "B"))
+
+;;The font size of the text inside each markov node
+(define node-text-size 24)
 
 ;; Add a markov-node to a markov-chain
 ;; node: the markov-node to be added
@@ -129,9 +136,10 @@
 ;; writes the number of the note currently playing
 ;; in the future, will be updated to change the color of the node currently playing
 ;; ------------------------ FINISH ------------------------
-(define (write-note-number ws)
-  (text (number->string (markov-chain-current-node ws)) 24 "blue"))
 
+
+;;Calc-circle-x and calc-circle-y
+;;Chain, Index in Chain -> X or Y coordinate
 (define (calc-circle-x chain index)
   (+ map-center-x (* map-radius (cos (- (/ (* 2 pi index) (length (markov-chain-nodes chain))) (/ pi 2) ))))
   )
@@ -139,29 +147,68 @@
   (+ map-center-y (* map-radius (sin (- (/ (* 2 pi index) (length (markov-chain-nodes chain))) (/ pi 2) ))))
   )
 
+;;draw-circles draws all of the circles in the node in a circular pattern
+;;If all nodes are to be drawn this should always be called with index as 0
+;;Chain, Index in Chain -> Image
 (define (draw-circles chain index)
   (cond
     [(= index (length (markov-chain-nodes chain))) markov-map]
     [else (place-image
-           (draw-node (= index (markov-chain-current-node chain)))
+           (draw-node (= index (markov-chain-current-node chain)) (list-ref (markov-chain-nodes chain) index))
            (calc-circle-x chain index)
            (calc-circle-y chain index)
            (draw-circles chain (+ 1 index)))]))
 
 
-(define (draw-node active)
-  (circle circle-radius "solid" (cond
-                       [active "green"]
-                       [else "blue"])))
+;;Generates the text to write in the node based on what it is
+;;Markov-Node -> Image
+(define (get-node-text node)
+  (text (string-append (list-ref midi-names (modulo (markov-node-midi node) 12)) (number->string (floor (/ (markov-node-midi node) 12)))) node-text-size "white")
+  )
 
-;; on each clock-tick, create a markov-chain of the nodes already played and pick the next node to be played
+;;Draw-Node: draws a single circle to represent a markov-node
+;;The arguments are: Is this node the active node? And The markov-node to draw
+;;Boolean, Markov-Node -> Image
+(define (draw-node active node)
+  (place-image
+   (get-node-text node)
+   circle-radius
+   circle-radius
+   (circle circle-radius "solid" (cond
+                                   [active "green"]
+                                   [else "blue"]))
+   )  )
+
+;;On each clock tick do both:
+;;Play the current note corresponding to the current node
+;;Simulate the markov chain to get the index of the next active node
+;;Markov-Chain -> Markov-Chain
 (define (tick-handler ws)
-  (both (pstream-queue p (synth-note "main" 35 (markov-node-midi (list-ref (markov-chain-nodes ws) (markov-chain-current-node ws))) (/ FRAME-RATE 5)) (pstream-current-frame p))
-        (make-markov-chain (markov-chain-nodes ws) (get-next-node ws))))
+  (invboth 
+   (make-markov-chain (markov-chain-nodes ws) (get-next-node ws))
+   (pstream-queue p (synth-note "main" 35 (markov-node-midi (list-ref (markov-chain-nodes ws) (markov-chain-current-node ws))) (/ FRAME-RATE 5)) (pstream-current-frame p))))
+
+
+;;Makes a list of random numbers 0 < rand < 1 of a given length
+;;Number -> List-Of-Numbers
+(define (make-random-list length)
+  (cond
+    [(= length 0) '()]
+    [else (cons (random) (make-random-list (- length 1)))]))
+
+;;Key Handler
+;;Markov-Chain -> Markov-Chain
+;;Currently adds a random node to the chain when "." is pressed
+(define (key-handler ws ke)
+  (cond
+    [(key=? ke ".") (add-node-to-chain (make-markov-node (+ 40 (random 40)) (normalize-node (make-random-list (+ 1 (length (markov-chain-nodes ws)))))  ) ws)]
+    [else ws])
+  )
+
 
 ;; the initial nodes in the markov-chain
 (define initial-chain
-  (add-node-to-chain (make-markov-node 79 '(.1 .1 .1 .1 .1 .5))
+  (add-node-to-chain (make-markov-node 79 '(.1 .1 .2 .2 .2 .2))
   (add-node-to-chain (make-markov-node 76 '(.2 .2 .2 .2 .2))
   (add-node-to-chain (make-markov-node 72 '(.25 .25 .25 .25))
   (add-node-to-chain (make-markov-node 67 '(.2 .25 .5))
@@ -171,4 +218,5 @@
 ;; The world state of this big-bang is a markov-chain
 (big-bang initial-chain
           [to-draw draw-handler]
-          [on-tick tick-handler 1/5])
+          [on-tick tick-handler 1/5]
+          [on-key key-handler])
