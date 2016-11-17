@@ -11,30 +11,40 @@
 (require 2htdp/image)
 
 ;; More dirty hacks
+;; Any Any -> Any
+;; Takes in 2 values and returns the second
 (define (both a b) b)
+;; Any Any -> Any
+;; Takes in 2 values and returns the first
 (define (invboth a b) a)
 
-;; A markov-node has
+;; World Definitions
+
+(define-struct markov-node [midi connections])
+;; A markov-node is a structure:
+;;  (make-markov-node Number list-of-numbers)
+;; interpretation: A markov-node has
 ;; - midi: a integer value that corresponds to a MIDI note number
 ;; - connections: a list of connection strengths, where the strengths are numbers between 0.0 and 1.0
-(define-struct markov-node [midi connections])
 
-;; A markov-chain has
+(define-struct markov-chain [nodes current-node])
+;; A markov-chain is a structure:
+;;  (make-markov-chain list-of-markov-nodes Number)
+;; interpretation: A markov-chain has
 ;; - nodes: a list of markov-nodes in the markov-chain
 ;; - current-node: a integer value corresponding to the current index of the markov-chain list
-(define-struct markov-chain [nodes current-node])
+
+;; Variables
 
 ;; the audio track the notes will be queued into
 (define p (make-pstream))
 
-;; the markov-map is the graphic interface where all the markov-nodes can be viewed and adjusted
-;; note: for now, the markov-map is the red rectangular outline and the numbers representing the note
 ;; the width and height of the markov-map background
 (define map-width 1200)
 (define map-height 600)
 
 ;; the markov-map is the graphic interface where all the markov-nodes can be viewed and adjusted
-;; note: for now, the markov-map is the red rectangular outline and the numbers representing the note
+;; For now, the markov-map is the red rectangular outline and the numbers representing the note
 (define markov-map (rectangle map-width map-height "outline" "white"))
 
 ;; the nodes are represented as circles on the markov-map, spaced in a larger circle around some center point
@@ -52,18 +62,20 @@
 ;;The font size of the text inside each markov node
 (define node-text-size 24)
 
-;; Add a markov-node to a markov-chain
+;; Add a markov-node to the nodes field of the markov-chain
 ;; node: the markov-node to be added
 ;; chain: the markov-chain to add the markov-node to
 ;; markov-node markov-chain -> markov-chain
-;; --------------- ADD CHECK-EXPECTS ---------------
+(check-expect (add-node-to-chain (make-markov-node 60 '(1)) (make-markov-chain '() 0))
+              (make-markov-chain (list (make-markov-node 60 '(1))) 0))
+;; --------------- ADD CHECK-EXPECTS --------------- * I wasnt sure how to add a second case to check for the random new connections when adding a node *
 (define (add-node-to-chain node chain)
   (make-markov-chain (append (alert-all-nodes-add (markov-chain-nodes chain)) (list node)) (markov-chain-current-node chain))
   )
 
-;; Alert all nodes of a new node
-;; list: the nodes of a markov-chain
-;; markov-chain-nodes -> markov-chain-nodes (with updated nodes)
+;; Alert all nodes in list-of-markov-nodes of a new node
+;; list: the list-of-markov-nodes of a markov-chain
+;; list-of-markov-nodes -> list-of-markov-nodes (updates connection field)
 ;; --------------- ADD CHECK-EXPECTS ---------------
 (define (alert-all-nodes-add list)
   (cond
@@ -72,9 +84,9 @@
 
 
 ;; Add a connection to each of the markov-nodes in the markov-chain
-;; Adds a new connection to the markov-node, then normalizes all of that markov-node's connections
+;; Adds a new, random connection to the markov-node, then normalizes all of that markov-node's connections
 ;; node: the markov-node whose connections are being adjusted
-;; markov-node -> markov-node
+;; markov-node -> markov-node 
 ;; --------------- ADD CHECK-EXPECTS --------------- (note: how do you check the code when it calls for a random value?)
 (define (node-alert-chain-add node)
   (make-markov-node (markov-node-midi node)
@@ -82,10 +94,10 @@
   )
 
 ;; Takes a list of connection strengths and returns a normalized list of connection strengths
-;; connections: a list of numbers between 0.0 and 1.0 that denote the connection strengths of a markov-node
-;; List-of-Numbers -> List-of-Numbers (whose sum is 1)
+;; connections: a list of numbers between 0.0 and 1.0 that denote the connection strengths of a markov-node to itself and each other markov-node in the list
+;; List-of-Numbers (whose sum is above 1) -> List-of-Numbers (whose sum is 1)
 (check-expect (normalize-node (cons 1.0 '())) (cons 1.0 '()))
-(check-expect (normalize-node (cons 0.2 (cons 0.3 '()))) (cons 0.4 (cons 0.6 '())))
+(check-expect (normalize-node (cons 1.0 (cons 0.5 '()))) (cons 2/3 (cons 1/3 '())))
 (check-expect (normalize-node (cons 0.4 (cons 0.6 (cons 0.4 (cons 0.6 '()))))) (cons 0.2 (cons 0.3 (cons 0.2 (cons 0.3 '())))))
 (define (normalize-node connections)
   (get-normalized connections (sum-of-list connections)))
@@ -112,7 +124,7 @@
     [else (+ (first list) (sum-of-list (rest list)))]
     ))
 
-;; updates the current-node index number to reflect the next node and changes the "active" node (and thus changes which node is lit up on the markov-map)
+;; updates the current-node (index number) of markov-chain to reflect the next node and changes the "active" node (and thus changes which node is lit up on the markov-map)
 ;; markov-chain -> number
 (define (get-next-node chain)
   (pick-node-based-on-weights (markov-node-connections (list-ref (markov-chain-nodes chain) (markov-chain-current-node chain))) 0 (random))
@@ -138,8 +150,8 @@
 ;; ------------------------ FINISH ------------------------
 
 
-;;Calc-circle-x and calc-circle-y
-;;Chain, Index in Chain -> X or Y coordinate
+;; Calc-circle-x and calc-circle-y
+;; Chain, Index in Chain -> X or Y coordinate
 (define (calc-circle-x chain index)
   (+ map-center-x (* map-radius (cos (- (/ (* 2 pi index) (length (markov-chain-nodes chain))) (/ pi 2) ))))
   )
@@ -148,7 +160,7 @@
   )
 
 ;;draw-circles draws all of the circles in the node in a circular pattern
-;;If all nodes are to be drawn this should always be called with index as 0
+;;If all nodes are to be drawn this should always be called with index as 0 ----------- I dont understand this part-----------
 ;;Chain, Index in Chain -> Image
 (define (draw-circles chain index)
   (cond
@@ -166,9 +178,10 @@
   (text (string-append (list-ref midi-names (modulo (markov-node-midi node) 12)) (number->string (floor (/ (markov-node-midi node) 12)))) node-text-size "white")
   )
 
-;;Draw-Node: draws a single circle to represent a markov-node
-;;The arguments are: Is this node the active node? And The markov-node to draw
-;;Boolean, Markov-Node -> Image
+;; Draws a single circle with labeled note name and octave to represent a markov-node
+;; Active: boolean value that is #true when the index of the markov-chain ------not sure what to put here-------Is this node the active node?
+;; Node: an element of list-of-markov-nodes that will be made into an image
+;; Boolean Markov-Node -> Image
 (define (draw-node active node)
   (place-image
    (get-node-text node)
@@ -179,34 +192,33 @@
                                    [else "blue"]))
    )  )
 
-;;On each clock tick do both:
-;;Play the current note corresponding to the current node
-;;Simulate the markov chain to get the index of the next active node
-;;Markov-Chain -> Markov-Chain
+;; On each clock tick:
+;; Create and return a markov-chain with the same list-of-markov-nodes but a new index
+;; Queue the note corresponding to the current node (based on the index)
+;; Markov-Chain -> Markov-Chain
 (define (tick-handler ws)
   (invboth 
    (make-markov-chain (markov-chain-nodes ws) (get-next-node ws))
    (pstream-queue p (synth-note "main" 35 (markov-node-midi (list-ref (markov-chain-nodes ws) (markov-chain-current-node ws))) (/ FRAME-RATE 5)) (pstream-current-frame p))))
 
 
-;;Makes a list of random numbers 0 < rand < 1 of a given length
-;;Number -> List-Of-Numbers
+;; Makes a list of random numbers 0 < rand < 1 of a given length
+;; Number -> List-Of-Numbers
 (define (make-random-list length)
   (cond
     [(= length 0) '()]
     [else (cons (random) (make-random-list (- length 1)))]))
 
-;;Key Handler
-;;Markov-Chain -> Markov-Chain
-;;Currently adds a random node to the chain when "." is pressed
+;; Key Handler
+;; Adds a random markov-node to the list-of-markov-nodes in the markov-chain when "." is pressed
+;; Markov-Chain -> Markov-Chain
 (define (key-handler ws ke)
   (cond
     [(key=? ke ".") (add-node-to-chain (make-markov-node (+ 40 (random 40)) (normalize-node (make-random-list (+ 1 (length (markov-chain-nodes ws)))))  ) ws)]
     [else ws])
   )
 
-
-;; the initial nodes in the markov-chain
+;; The initial state of the world is a markov-chain starting with this list-of-markov-nodes and these connections
 (define initial-chain
   (add-node-to-chain (make-markov-node 79 '(.1 .1 .2 .2 .2 .2))
   (add-node-to-chain (make-markov-node 76 '(.2 .2 .2 .2 .2))
