@@ -1,0 +1,88 @@
+package in.blazingk.midifreqanalyzer;
+import java.io.File;
+import java.util.ArrayList;
+import java.util.HashMap;
+
+import javax.sound.midi.MidiEvent;
+import javax.sound.midi.MidiSystem;
+import javax.sound.midi.Sequence;
+import javax.sound.midi.ShortMessage;
+import javax.sound.midi.Track;
+
+public class FreqAnalyzer {
+	
+	
+	//The key for this integer is note1 * 1000 + note2
+	public static HashMap<Integer, Integer> sequenceCount = new HashMap<Integer, Integer>();
+	public static ArrayList<Node> nodes = new ArrayList<Node>();
+	public static String[] filenames = {"song.mid", "whoyougonnacall.mid", "Misirlou.mid"};
+	public static void main(String[] args) throws Exception{
+		for (String s: filenames){
+			analyzeSong(new File(s));
+		}
+		int sum = 0;
+		for (int i = 0; i < sequenceCount.values().size(); i++){
+			sum+= (Integer)sequenceCount.values().toArray()[i];
+		}
+		for (int i = 0; i < sequenceCount.keySet().size(); i++){
+			int key = (Integer)sequenceCount.keySet().toArray()[i];
+			int total = sequenceCount.get(key);
+			System.out.println((key/1000)+"->"+(key%1000)+": "+((float)total/(float)sum));
+			
+			
+			if (getNode(key/1000) != null){
+				if (getNode(key%1000) == null){
+					Node n = new Node();
+					n.midivalue = key%1000;
+					nodes.add(n);
+				}
+				getNode(key/1000).connection.put(getNode(key%1000), (double)total / (double)sum);
+			}
+			
+		}
+		
+		
+		
+	}
+	
+	public static Node getNode(int midi){
+		for (int i = 0; i < nodes.size(); i++){
+			if (nodes.get(i).midivalue == midi){
+				return nodes.get(i);
+			}
+		}
+		return null;
+	}
+	
+	
+	public static void analyzeSong(File f) throws Exception {
+		Sequence sequence = MidiSystem.getSequence(f);
+		for (Track track: sequence.getTracks()){
+			ArrayList<Integer> noteValues = new ArrayList<Integer>();
+			for (int i = 0; i < track.size(); i++){
+				MidiEvent event = track.get(i);
+				if (event.getMessage() instanceof ShortMessage){
+					ShortMessage sm = (ShortMessage) event.getMessage();
+					if (sm.getCommand() == 0x90){ //Note on
+						noteValues.add(sm.getData1());
+					}
+				}
+			}
+			if (noteValues.size() > 1){
+				for (int i = 1; i < noteValues.size(); i++){
+					int lastValue = noteValues.get(i-1);
+					int thisValue = noteValues.get(i);
+					if (sequenceCount.containsKey((lastValue*1000)+thisValue)){
+					sequenceCount.put((lastValue*1000)+thisValue, sequenceCount.get((lastValue*1000)+thisValue)+1);
+					}else{
+					sequenceCount.put((lastValue*1000)+thisValue, 1);	
+					}
+				}
+			}
+		}
+	}
+	
+	
+	
+
+}

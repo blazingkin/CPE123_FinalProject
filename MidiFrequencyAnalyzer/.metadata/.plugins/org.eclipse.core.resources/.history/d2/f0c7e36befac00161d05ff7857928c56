@@ -1,0 +1,7 @@
+package in.blazingk.midifreqanalyzer;
+
+public class Node {
+	public int midivalue;
+	
+
+}

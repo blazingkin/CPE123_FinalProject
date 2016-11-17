@@ -1,0 +1,9 @@
+package in.blazingk.midifreqanalyzer;
+
+import java.util.HashMap;
+
+public class Node {
+	public int midivalue;
+	public HashMap<Integer, Double> connection = new HashMap<Integer, Double>();
+
+}

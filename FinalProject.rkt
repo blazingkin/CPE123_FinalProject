@@ -217,15 +217,27 @@
     [(key=? ke ".") (add-node-to-chain (make-markov-node (+ 40 (random 40)) (normalize-node (make-random-list (+ 1 (length (markov-chain-nodes ws)))))  ) ws)]
     [else ws])
   )
-
-;; The initial state of the world is a markov-chain starting with this list-of-markov-nodes and these connections
-(define initial-chain
+;;An example of an initial-chain
+#|(define initial-chain
   (add-node-to-chain (make-markov-node 79 '(.1 .1 .2 .2 .2 .2))
   (add-node-to-chain (make-markov-node 76 '(.2 .2 .2 .2 .2))
   (add-node-to-chain (make-markov-node 72 '(.25 .25 .25 .25))
   (add-node-to-chain (make-markov-node 67 '(.2 .25 .5))
   (add-node-to-chain (make-markov-node 64 '(.5 .5))
   (add-node-to-chain (make-markov-node 60 '(1)) (make-markov-chain '() 0))))))))
+|#
+
+;; The initial state of the world is a markov-chain starting with this list-of-markov-nodes and these connections (This sample initial-chain is from mary had a little lamb)
+(define initial-chain
+  (make-markov-chain (list 
+(make-markov-node 52 (list 0 0 1.0 0 0 0 ))
+(make-markov-node 55 (list 0 0 0 0.42857142857142855 0.5 0.07142857142857142 ))
+(make-markov-node 60 (list 0.3333333333333333 0 0.3333333333333333 0.3333333333333333 0 0 ))
+(make-markov-node 62 (list 0 0.3 0.15 0.35 0.2 0 ))
+(make-markov-node 64 (list 0 0.3181818181818182 0 0.22727272727272727 0.4090909090909091 0.045454545454545456 ))
+(make-markov-node 67 (list 0 0.25 0 0 0.25 0.5 ))
+) 0)
+)
 
 ;; The world state of this big-bang is a markov-chain
 (big-bang initial-chain
