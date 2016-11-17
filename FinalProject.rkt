@@ -149,19 +149,27 @@
 ;; in the future, will be updated to change the color of the node currently playing
 ;; ------------------------ FINISH ------------------------
 
-
-;; Calc-circle-x and calc-circle-y
-;; Chain, Index in Chain -> X or Y coordinate
+;; Returns the x-coordinate where the node should be drawn (depends on how many markov-nodes are in the list-of-markov-nodes)
+;; Index: number representing a certain element of the list-of-markov-nodes
+;; Markov-Chain Number -> Number
 (define (calc-circle-x chain index)
   (+ map-center-x (* map-radius (cos (- (/ (* 2 pi index) (length (markov-chain-nodes chain))) (/ pi 2) ))))
   )
+(check-within (calc-circle-x (make-markov-chain (list (make-markov-node 50 '(0.5 0.5)) (make-markov-node 50 '(0.7 0.3))) 0) 1)
+              (+ map-center-x (* map-radius (cos (- (/ (* 2 pi 1) 2) (/ pi 2))))) 1e-8)
+;; Returns the y-coordinate where the node should be drawn
+;; Index: number representing a certain element of the list-of-markov-nodes
+;; Markov-Chain Number -> Number
 (define (calc-circle-y chain index)
   (+ map-center-y (* map-radius (sin (- (/ (* 2 pi index) (length (markov-chain-nodes chain))) (/ pi 2) ))))
   )
+(check-within (calc-circle-y (make-markov-chain (list (make-markov-node 40 '(0.5 0.5)) (make-markov-node 70 '(0.7 0.3))) 0) 0)
+              (+ map-center-y (* map-radius (sin (- (/ (* 2 pi 0) 2) (/ pi 2))))) 1e-8)
 
-;;draw-circles draws all of the circles in the node in a circular pattern
-;;If all nodes are to be drawn this should always be called with index as 0 ----------- I dont understand this part-----------
-;;Chain, Index in Chain -> Image
+;; Draws circles for all markov-nodes in list-of-markov-nodes of markov-chain in a circular pattern
+;; Should always be called with index as 0 (loops through the list-of-markov-nodes starting at index: 0)
+;; Index: number representing a certain element of list-of-markov-nodes
+;; Markov-Chiain Number -> Image
 (define (draw-circles chain index)
   (cond
     [(= index (length (markov-chain-nodes chain))) markov-map]
@@ -171,15 +179,18 @@
            (calc-circle-y chain index)
            (draw-circles chain (+ 1 index)))]))
 
-
-;;Generates the text to write in the node based on what it is
-;;Markov-Node -> Image
+;; Generates the text to be placed in a circle (indicates note name and octave)
+;; Markov-Node -> Image
 (define (get-node-text node)
   (text (string-append (list-ref midi-names (modulo (markov-node-midi node) 12)) (number->string (floor (/ (markov-node-midi node) 12)))) node-text-size "white")
   )
+(check-expect (get-node-text (make-markov-node 60 '(1)))
+                             (text (string-append (list-ref midi-names 0) (number->string 5)) node-text-size "white"))
+(check-expect (get-node-text (make-markov-node 79 '(1)))
+                             (text (string-append (list-ref midi-names 7) (number->string 6)) node-text-size "white"))
 
-;; Draws a single circle with labeled note name and octave to represent a markov-node
-;; Active: boolean value that is #true when the index of the markov-chain ------not sure what to put here-------Is this node the active node?
+;; Draws a single circle with labeled note name and octave to represent a markov-node and creates a green circle for the "active" node
+;; Active: boolean value that is #true when index equals the markov-chain's current node
 ;; Node: an element of list-of-markov-nodes that will be made into an image
 ;; Boolean Markov-Node -> Image
 (define (draw-node active node)
@@ -191,6 +202,19 @@
                                    [active "green"]
                                    [else "blue"]))
    )  )
+(check-expect (draw-node #false (make-markov-node 55 '(.25 .75)))
+              (place-image
+               (get-node-text (make-markov-node 55 '(.25 .75)))
+               circle-radius
+               circle-radius
+               (circle circle-radius "solid" "blue")))
+(check-expect (draw-node #true (make-markov-node 64 '(.25 .75)))
+              (place-image
+               (get-node-text (make-markov-node 64 '(.25 .75)))
+               circle-radius
+               circle-radius
+               (circle circle-radius "solid" "green")))
+              
 
 ;; On each clock tick:
 ;; Create and return a markov-chain with the same list-of-markov-nodes but a new index
@@ -217,7 +241,8 @@
     [(key=? ke ".") (add-node-to-chain (make-markov-node (+ 40 (random 40)) (normalize-node (make-random-list (+ 1 (length (markov-chain-nodes ws)))))  ) ws)]
     [else ws])
   )
-;;An example of an initial-chain
+
+;;An example of an initial-chain (a world state)
 #|(define initial-chain
   (add-node-to-chain (make-markov-node 79 '(.1 .1 .2 .2 .2 .2))
   (add-node-to-chain (make-markov-node 76 '(.2 .2 .2 .2 .2))
