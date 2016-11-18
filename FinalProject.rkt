@@ -145,10 +145,6 @@
   (draw-circles ws 0)
   )
 
-;; writes the number of the note currently playing
-;; in the future, will be updated to change the color of the node currently playing
-;; ------------------------ FINISH ------------------------
-
 ;; Returns the x-coordinate where the node should be drawn (depends on how many markov-nodes are in the list-of-markov-nodes)
 ;; Index: number representing a certain element of the list-of-markov-nodes
 ;; Markov-Chain Number -> Number
