@@ -132,7 +132,7 @@
 ;;Loops through the nodes and prints them out one at a time
 (define (printloop l i)
   (cond
-    [(empty? l) (display ") 0)")]
+    [(empty? l) (display ") 0 starting-gui-state)")]
     [else (both
    (display (string-append "(make-markov-node " (number->string (list-ref usedlist i)) " (list " (l->s (first l)) "))\n"))
    (printloop (rest l) (add1 i)))]))

@@ -48,7 +48,7 @@ public class FreqAnalyzer {
 			nodes.get(i).normalizeNode();
 			nodes.get(i).print();
 		}
-		System.out.println(") 0)");
+		System.out.println(") 0 starting-gui-state)");
 		
 		
 		

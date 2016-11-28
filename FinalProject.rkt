@@ -20,6 +20,13 @@
 
 ;; World Definitions
 
+;;A gui-state is a structure:
+;; (make-gui-state Number)
+;; interpretation: A Gui state has:
+;; - Node-selected: an integer corresponding to the index of the selected node
+(define-struct gui-state [node-selected])
+(define starting-gui-state (make-gui-state 0))
+
 (define-struct markov-node [midi connections])
 ;; A markov-node is a structure:
 ;;  (make-markov-node Number list-of-numbers)
@@ -27,7 +34,7 @@
 ;; - midi: a integer value that corresponds to a MIDI note number
 ;; - connections: a list of connection strengths, where the strengths are numbers between 0.0 and 1.0
 
-(define-struct markov-chain [nodes current-node])
+(define-struct markov-chain [nodes current-node gui])
 ;; A markov-chain is a structure:
 ;;  (make-markov-chain list-of-markov-nodes Number)
 ;; interpretation: A markov-chain has
@@ -66,11 +73,11 @@
 ;; node: the markov-node to be added
 ;; chain: the markov-chain to add the markov-node to
 ;; markov-node markov-chain -> markov-chain
-(check-expect (add-node-to-chain (make-markov-node 60 '(1)) (make-markov-chain '() 0))
-              (make-markov-chain (list (make-markov-node 60 '(1))) 0))
+(check-expect (add-node-to-chain (make-markov-node 60 '(1)) (make-markov-chain '() 0 starting-gui-state))
+              (make-markov-chain (list (make-markov-node 60 '(1))) 0 starting-gui-state))
 ;; --------------- ADD CHECK-EXPECTS --------------- * I wasnt sure how to add a second case to check for the random new connections when adding a node *
 (define (add-node-to-chain node chain)
-  (make-markov-chain (append (alert-all-nodes-add (markov-chain-nodes chain)) (list node)) (markov-chain-current-node chain))
+  (make-markov-chain (append (alert-all-nodes-add (markov-chain-nodes chain)) (list node)) (markov-chain-current-node chain) (markov-chain-gui chain))
   )
 
 ;; Alert all nodes in list-of-markov-nodes of a new node
@@ -142,7 +149,11 @@
 ;; draw the background, queue next note to be played at the end of the pstream, and write the note's corresponding number onto the markov-map
 ;; the duration of each note is half the FRAME-RATE
 (define (draw-handler ws)
-  (draw-circles ws 0)
+  (place-image
+   (text (number->string (gui-state-node-selected (markov-chain-gui ws))) 24 "black")
+   24
+   24
+   (draw-circles ws 0))
   )
 
 ;; Returns the x-coordinate where the node should be drawn (depends on how many markov-nodes are in the list-of-markov-nodes)
@@ -151,7 +162,7 @@
 (define (calc-circle-x chain index)
   (+ map-center-x (* map-radius (cos (- (/ (* 2 pi index) (length (markov-chain-nodes chain))) (/ pi 2) ))))
   )
-(check-within (calc-circle-x (make-markov-chain (list (make-markov-node 50 '(0.5 0.5)) (make-markov-node 50 '(0.7 0.3))) 0) 1)
+(check-within (calc-circle-x (make-markov-chain (list (make-markov-node 50 '(0.5 0.5)) (make-markov-node 50 '(0.7 0.3))) 0 starting-gui-state) 1)
               (+ map-center-x (* map-radius (cos (- (/ (* 2 pi 1) 2) (/ pi 2))))) 1e-8)
 ;; Returns the y-coordinate where the node should be drawn
 ;; Index: number representing a certain element of the list-of-markov-nodes
@@ -159,7 +170,7 @@
 (define (calc-circle-y chain index)
   (+ map-center-y (* map-radius (sin (- (/ (* 2 pi index) (length (markov-chain-nodes chain))) (/ pi 2) ))))
   )
-(check-within (calc-circle-y (make-markov-chain (list (make-markov-node 40 '(0.5 0.5)) (make-markov-node 70 '(0.7 0.3))) 0) 0)
+(check-within (calc-circle-y (make-markov-chain (list (make-markov-node 40 '(0.5 0.5)) (make-markov-node 70 '(0.7 0.3))) 0 starting-gui-state) 0)
               (+ map-center-y (* map-radius (sin (- (/ (* 2 pi 0) 2) (/ pi 2))))) 1e-8)
 
 ;; Draws circles for all markov-nodes in list-of-markov-nodes of markov-chain in a circular pattern
@@ -218,7 +229,7 @@
 ;; Markov-Chain -> Markov-Chain
 (define (tick-handler ws)
   (invboth 
-   (make-markov-chain (markov-chain-nodes ws) (get-next-node ws))
+   (make-markov-chain (markov-chain-nodes ws) (get-next-node ws) (markov-chain-gui ws))
    (pstream-queue p (synth-note "main" 35 (markov-node-midi (list-ref (markov-chain-nodes ws) (markov-chain-current-node ws))) (/ FRAME-RATE 5)) (pstream-current-frame p))))
 
 
@@ -238,6 +249,32 @@
     [else ws])
   )
 
+(define (get-distance x_1 y_1 x_2 y_2)
+  (sqrt (+ (sqr (- x_2 x_1)) (sqr (- y_2 y_1)))))
+(check-expect (get-distance 0 0 3 4) 5)
+(check-expect (get-distance 0 0 0 0) 0)
+(check-expect (get-distance 0 1 0 0) 1)
+
+;;This takes - A x and y position, 0, the list of nodes, 0
+;;X pos, Y pos, 0, markov-chain, 0 -> The index of the highest node
+(define (find-closest x y index chain prevlowest)
+  (cond
+    [(= index (length (markov-chain-nodes chain))) prevlowest]
+    [else
+     (cond
+       [(< (get-distance x y (calc-circle-x chain index) (calc-circle-y chain index))
+           (get-distance x y (calc-circle-x chain prevlowest) (calc-circle-y chain prevlowest))) (find-closest x y (add1 index) chain index)]
+       [else (find-closest x y (add1 index) chain prevlowest)])
+     ]))
+
+(define (click-handler ws x y me)
+  (cond
+    [(string=? me "button-down") (cond
+                                  [(< (get-distance x y (calc-circle-x ws (find-closest x y 0 ws 0)) (calc-circle-y ws (find-closest x y 0 ws 0))) circle-radius)
+                                   (make-markov-chain (markov-chain-nodes ws) (markov-chain-current-node ws) (make-gui-state (find-closest x y 0 ws 0)))]
+                                  [else ws])]
+    [else ws]))
+
 ;;An example of an initial-chain (a world state)
 #|(define initial-chain
   (add-node-to-chain (make-markov-node 79 '(.1 .1 .2 .2 .2 .2))
@@ -245,7 +282,7 @@
   (add-node-to-chain (make-markov-node 72 '(.25 .25 .25 .25))
   (add-node-to-chain (make-markov-node 67 '(.2 .25 .5))
   (add-node-to-chain (make-markov-node 64 '(.5 .5))
-  (add-node-to-chain (make-markov-node 60 '(1)) (make-markov-chain '() 0))))))))
+  (add-node-to-chain (make-markov-node 60 '(1)) (make-markov-chain '() 0 starting-gui-state))))))))
 |#
 
 ;; The initial state of the world is a markov-chain starting with this list-of-markov-nodes and these connections (This sample initial-chain is from mary had a little lamb)
@@ -257,11 +294,12 @@
 (make-markov-node 62 (list 0 0.3 0.15 0.35 0.2 0 ))
 (make-markov-node 64 (list 0 0.3181818181818182 0 0.22727272727272727 0.4090909090909091 0.045454545454545456 ))
 (make-markov-node 67 (list 0 0.25 0 0 0.25 0.5 ))
-) 0)
+) 0 starting-gui-state)
 )
 
 ;; The world state of this big-bang is a markov-chain
 (big-bang initial-chain
           [to-draw draw-handler]
           [on-tick tick-handler 1/5]
-          [on-key key-handler])
+          [on-key key-handler]
+          [on-mouse click-handler])
