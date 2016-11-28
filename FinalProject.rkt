@@ -54,6 +54,12 @@
 ;; For now, the markov-map is the red rectangular outline and the numbers representing the note
 (define markov-map (rectangle map-width map-height "outline" "white"))
 
+;; the width and height of the connections-box
+(define connections-width 300)
+(define connections-height 600)
+;; the connections-box background 
+(define connections-box (rectangle connections-width connections-height "solid" "green"))
+
 ;; the nodes are represented as circles on the markov-map, spaced in a larger circle around some center point
 ;; map-center-x and map-center-y define the x- and y-position of this center point
 (define map-center-x (/ map-width 2))
@@ -146,15 +152,40 @@
     [else (pick-node-based-on-weights (rest weights) (+ 1 inc) (- rand (first weights)))])
   )
 
-;; draw the background, queue next note to be played at the end of the pstream, and write the note's corresponding number onto the markov-map
-;; the duration of each note is half the FRAME-RATE
+;; Draws the connection strengths and nodes with corresponding name onto the markov-map
 (define (draw-handler ws)
   (place-image
-   (text (number->string (gui-state-node-selected (markov-chain-gui ws))) 24 "black")
-   24
-   24
+   (draw-connections ws 0)
+   150
+   300
    (draw-circles ws 0))
   )
+
+;; Draws the connections of one particular node to itself and all the other nodes
+;; Should always be called with index as 0 (loops through the list-of-markov-nodes starting at index: 0)
+;; Index: number representing a certain element of list-of-markov-nodes
+;; Markov-Chain -> Image 
+(define (draw-connections chain index)
+  (cond
+    [(= index (length (markov-chain-nodes chain)))
+     (place-image (text (string-append "Connections for: " (get-node-name (list-ref (markov-chain-nodes chain) (gui-state-node-selected (markov-chain-gui chain))))) 25 "black")
+                  (/ connections-width 2)
+                  15
+                  connections-box)]
+    [else (place-image
+           (draw-connection-line (list-ref (markov-chain-nodes chain) (gui-state-node-selected (markov-chain-gui chain))) (list-ref (markov-chain-nodes chain) index) index)
+           (/ connections-width 2)
+           (+ 50 (* index (/ (- connections-height 50) (length (markov-chain-nodes chain)))))
+           (draw-connections chain (add1 index)))]))
+
+;; Draws a single connection line (includes name of the node and name of the other node with a percentage representing the connection strength) in the connections box
+;; Node1: The node that the user clicks on
+;; Node2: A node in the Markov-Chain at a specific index number
+;; Index: number represinting a certain element of the list-of-markov-nodes
+(define (draw-connection-line node1 node2 index)
+  (text (string-append (get-node-name node1) " <--> "
+                       (get-node-name node2) " : "
+                       (number->string (round (* 100 (list-ref (markov-node-connections node1) index)))) " %") 20 "black"))
 
 ;; Returns the x-coordinate where the node should be drawn (depends on how many markov-nodes are in the list-of-markov-nodes)
 ;; Index: number representing a certain element of the list-of-markov-nodes
@@ -185,6 +216,11 @@
            (calc-circle-x chain index)
            (calc-circle-y chain index)
            (draw-circles chain (+ 1 index)))]))
+
+;; Generates the name of a node
+;; Markov-Node -> String
+(define (get-node-name node)
+  (string-append (list-ref midi-names (modulo (markov-node-midi node) 12)) (number->string (floor (/ (markov-node-midi node) 12)))))
 
 ;; Generates the text to be placed in a circle (indicates note name and octave)
 ;; Markov-Node -> Image
