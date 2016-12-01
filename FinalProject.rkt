@@ -10,6 +10,14 @@
 (require 2htdp/universe)
 (require 2htdp/image)
 
+;; END OF DEPENDENCIES
+
+
+
+
+
+
+
 ;; More dirty hacks
 ;; Any Any -> Any
 ;; Takes in 2 values and returns the second
@@ -20,12 +28,12 @@
 
 ;; World Definitions
 
+
+(define-struct gui-state [node-selected connection-selected tick-rate tick-count])
 ;;A gui-state is a structure:
 ;; (make-gui-state Number)
 ;; interpretation: A Gui state has:
 ;; - Node-selected: an integer corresponding to the index of the selected node
-(define-struct gui-state [node-selected connection-selected])
-(define starting-gui-state (make-gui-state 0 0))
 
 (define-struct markov-node [midi connections])
 ;; A markov-node is a structure:
@@ -41,6 +49,14 @@
 ;; - nodes: a list of markov-nodes in the markov-chain
 ;; - current-node: a integer value corresponding to the current index of the markov-chain list
 
+;;END OF WORLD DEFINITIONS
+
+
+
+
+
+
+
 ;; Variables
 
 ;; the audio track the notes will be queued into
@@ -49,6 +65,9 @@
 ;; the width and height of the markov-map background
 (define map-width 1200)
 (define map-height 600)
+
+;;The gui-state that the program starts in and will be used for some check-expect type things
+(define starting-gui-state (make-gui-state 0 0 5 0))
 
 ;; the markov-map is the graphic interface where all the markov-nodes can be viewed and adjusted
 ;; For now, the markov-map is the red rectangular outline and the numbers representing the note
@@ -74,6 +93,82 @@
 
 ;;The font size of the text inside each markov node
 (define node-text-size 24)
+
+;;END OF VARIABLES
+
+
+
+
+
+
+
+;; Makes a list of random numbers 0 < rand < 1 of a given length
+;; Number -> List-Of-Numbers
+(define (make-random-list length)
+  (cond
+    [(= length 0) '()]
+    [else (cons (random) (make-random-list (- length 1)))]))
+
+;;Sets a particular index of a list to value
+;;List, Number, Value -> List
+;;If the index is out of range of the list, the original list will be returned
+(define (list-set list index value)
+  (cond
+    [(empty? list) '()]
+    [(= index 0) (cons value (list-set (rest list) -1 value))]
+    [else (cons (first list) (list-set (rest list) (sub1 index) value))]))
+(check-expect (list-set (list 1 2 3) 0 0) (list 0 2 3))
+(check-expect (list-set '() 0 0) '())
+(check-expect (list-set (list 3 4 5) 1 1) (list 3 1 5))
+
+;; computes the sum of all elements in a list
+;; list: a list of numbers
+;; List-of-Numbers -> Number
+(define (sum-of-list list)
+  (cond
+    [(empty? list) 0]
+    [else (+ (first list) (sum-of-list (rest list)))]
+    ))
+(check-expect (sum-of-list (list 1 2 3)) 6)
+(check-expect (sum-of-list (list 0 1 0 1 0 1)) 3)
+(check-expect (sum-of-list '()) 0)
+
+;;Finds the Euclidean distance between two points
+(define (get-distance x_1 y_1 x_2 y_2)
+  (sqrt (+ (sqr (- x_2 x_1)) (sqr (- y_2 y_1)))))
+(check-expect (get-distance 0 0 3 4) 5)
+(check-expect (get-distance 0 0 0 0) 0)
+(check-expect (get-distance 0 1 0 0) 1)
+
+;;Update GUI connection
+(define (update-gui-connection gui newcon)
+  (make-gui-state (gui-state-node-selected gui) newcon (gui-state-tick-rate gui) (gui-state-tick-count gui)))
+
+;;Update GUI selection
+(define (update-gui-node gui newnode)
+  (make-gui-state newnode (gui-state-connection-selected gui) (gui-state-tick-rate gui) (gui-state-tick-count gui)))
+
+;;Update GUI Tick Rate
+(define (update-gui-rate gui tickrate)
+  (make-gui-state (gui-state-node-selected gui) (gui-state-connection-selected gui) tickrate (gui-state-tick-count gui)))
+
+;;Update GUI Tick Count
+(define (update-gui-tickcount gui tickcount)
+  (make-gui-state (gui-state-node-selected gui) (gui-state-connection-selected gui) (gui-state-tick-rate gui) tickcount))
+
+;;Update GUI
+(define (update-gui chain newgui)
+  (make-markov-chain (markov-chain-nodes chain) (markov-chain-current-node chain) newgui))
+
+
+;;END OF UTILITY FUNCTIONS
+
+
+
+
+
+
+
 
 ;; Add a markov-node to the nodes field of the markov-chain
 ;; node: the markov-node to be added
@@ -128,17 +223,6 @@
     [(empty? connections) '()]
     [else (cons (/ (first connections) sum) (get-normalized (rest connections) sum))]))
 
-;; computes the sum of all elements in a list
-;; list: a list of numbers
-;; List-of-Numbers -> Number
-(define (sum-of-list list)
-  (cond
-    [(empty? list) 0]
-    [else (+ (first list) (sum-of-list (rest list)))]
-    ))
-(check-expect (sum-of-list (list 1 2 3)) 6)
-(check-expect (sum-of-list (list 0 1 0 1 0 1)) 3)
-(check-expect (sum-of-list '()) 0)
 
 ;; updates the current-node (index number) of markov-chain to reflect the next node and changes the "active" node (and thus changes which node is lit up on the markov-map)
 ;; markov-chain -> number
@@ -154,6 +238,34 @@
     [(< rand (first weights)) inc]
     [else (pick-node-based-on-weights (rest weights) (+ 1 inc) (- rand (first weights)))])
   )
+
+
+;;Updates a single connection in a node and then normalizes the rest of the node
+;;Markov-Chain, Int, Int, Num -> Markov-Chain
+;;Chain: The chain to be updated
+;;Node: The index of the node to be changed
+;;Connection: The index of the connection to be changed
+;;Delta: The amount to change it
+;;Note - This function will never let a connection go below 0
+(define (change-connection chain node connection delta)
+  (make-markov-chain (list-set (markov-chain-nodes chain)
+                               node
+                               (make-markov-node (markov-node-midi (list-ref (markov-chain-nodes chain) node)) (normalize-node (list-set
+                                                (markov-node-connections (list-ref (markov-chain-nodes chain) node))
+                                                connection
+                                                (max 0 (+ delta (list-ref (markov-node-connections (list-ref (markov-chain-nodes chain) node)) connection)))))
+                               ))
+                     (markov-chain-current-node chain) (markov-chain-gui chain)))
+
+
+;;END OF MARKOV CHAIN FUNCTIONS
+
+
+
+
+
+
+
 
 ;; Draws the connection strengths and nodes with corresponding name onto the markov-map
 (define (draw-handler ws)
@@ -213,7 +325,7 @@
 ;; Draws circles for all markov-nodes in list-of-markov-nodes of markov-chain in a circular pattern
 ;; Should always be called with index as 0 (loops through the list-of-markov-nodes starting at index: 0)
 ;; Index: number representing a certain element of list-of-markov-nodes
-;; Markov-Chiain Number -> Image
+;; Markov-Chain Number -> Image
 (define (draw-circles chain index)
   (cond
     [(= index (length (markov-chain-nodes chain))) markov-map]
@@ -263,53 +375,40 @@
                circle-radius
                circle-radius
                (circle circle-radius "solid" "green")))
-              
+
+;;END OF DRAW LOGIC
+
+
+
+
+
+
 
 ;; On each clock tick:
 ;; Create and return a markov-chain with the same list-of-markov-nodes but a new index
 ;; Queue the note corresponding to the current node (based on the index)
 ;; Markov-Chain -> Markov-Chain
 (define (tick-handler ws)
-  (invboth 
-   (make-markov-chain (markov-chain-nodes ws) (get-next-node ws) (markov-chain-gui ws))
-   (pstream-queue p (synth-note "main" 35 (markov-node-midi (list-ref (markov-chain-nodes ws) (markov-chain-current-node ws))) (/ FRAME-RATE 5)) (pstream-current-frame p))))
-
-
-;; Makes a list of random numbers 0 < rand < 1 of a given length
-;; Number -> List-Of-Numbers
-(define (make-random-list length)
   (cond
-    [(= length 0) '()]
-    [else (cons (random) (make-random-list (- length 1)))]))
+    
+  [(= (gui-state-tick-rate (markov-chain-gui ws)) (gui-state-tick-count (markov-chain-gui ws)))
+   (invboth 
+   (make-markov-chain (markov-chain-nodes ws) (get-next-node ws) (update-gui-tickcount (markov-chain-gui ws) 0))
+   (pstream-queue p (synth-note "main" 35 (markov-node-midi (list-ref (markov-chain-nodes ws) (markov-chain-current-node ws))) (/ FRAME-RATE 5)) (pstream-current-frame p)))]
+  [else
+   (update-gui ws (update-gui-tickcount (markov-chain-gui ws) (add1 (gui-state-tick-count (markov-chain-gui ws)))))
+   ]))
 
-;;Sets a particular index of a list to value
-;;List, Number, Value -> List
-;;If the index is out of range of the list, the original list will be returned
-(define (list-set list index value)
-  (cond
-    [(empty? list) '()]
-    [(= index 0) (cons value (list-set (rest list) -1 value))]
-    [else (cons (first list) (list-set (rest list) (sub1 index) value))]))
-(check-expect (list-set (list 1 2 3) 0 0) (list 0 2 3))
-(check-expect (list-set '() 0 0) '())
-(check-expect (list-set (list 3 4 5) 1 1) (list 3 1 5))
+;;END TICK HANDLER
 
-;;Updates a single connection in a node and then normalizes the rest of the node
-;;Markov-Chain, Int, Int, Num -> Markov-Chain
-;;Chain: The chain to be updated
-;;Node: The index of the node to be changed
-;;Connection: The index of the connection to be changed
-;;Delta: The amount to change it
-;;Note - This function will never let a connection go below 0
-(define (change-connection chain node connection delta)
-  (make-markov-chain (list-set (markov-chain-nodes chain)
-                               node
-                               (make-markov-node (markov-node-midi (list-ref (markov-chain-nodes chain) node)) (normalize-node (list-set
-                                                (markov-node-connections (list-ref (markov-chain-nodes chain) node))
-                                                connection
-                                                (max 0 (+ delta (list-ref (markov-node-connections (list-ref (markov-chain-nodes chain) node)) connection)))))
-                               ))
-                     (markov-chain-current-node chain) (markov-chain-gui chain)))
+
+
+
+
+
+
+
+
 
 ;; Key Handler
 ;; Adds a random markov-node to the list-of-markov-nodes in the markov-chain when "." is pressed
@@ -323,19 +422,19 @@
     [(key=? ke "right") (change-connection ws (gui-state-node-selected (markov-chain-gui ws)) (gui-state-connection-selected (markov-chain-gui ws)) .1)]
     ;;For the up and down arrow keys, change which node is selected
     [(key=? ke "up") (make-markov-chain (markov-chain-nodes ws) (markov-chain-current-node ws)
-                                        (make-gui-state (gui-state-node-selected (markov-chain-gui ws)) (max 0 (- (gui-state-connection-selected (markov-chain-gui ws)) 1))))]
+                                        (update-gui-connection (markov-chain-gui ws) (max 0 (- (gui-state-connection-selected (markov-chain-gui ws)) 1))))]
     [(key=? ke "down") (make-markov-chain (markov-chain-nodes ws) (markov-chain-current-node ws)
-                                        (make-gui-state (gui-state-node-selected (markov-chain-gui ws)) (min (sub1 (length (markov-chain-nodes ws))) (+ (gui-state-connection-selected (markov-chain-gui ws)) 1))))]
+                                        (update-gui-connection (markov-chain-gui ws) (min (sub1 (length (markov-chain-nodes ws))) (+ (gui-state-connection-selected (markov-chain-gui ws)) 1))))]
     [else ws])
   )
 
+;;END OF KEY HANDLER
 
-;;Finds the Euclidean distance between two points
-(define (get-distance x_1 y_1 x_2 y_2)
-  (sqrt (+ (sqr (- x_2 x_1)) (sqr (- y_2 y_1)))))
-(check-expect (get-distance 0 0 3 4) 5)
-(check-expect (get-distance 0 0 0 0) 0)
-(check-expect (get-distance 0 1 0 0) 1)
+
+
+
+
+
 
 ;;This takes - A x and y position, 0, the list of nodes, 0
 ;;X pos, Y pos, 0, markov-chain, 0 -> The index of the highest node
@@ -348,25 +447,24 @@
            (get-distance x y (calc-circle-x chain prevlowest) (calc-circle-y chain prevlowest))) (find-closest x y (add1 index) chain index)]
        [else (find-closest x y (add1 index) chain prevlowest)])
      ]))
+(check-expect (find-closest 0 0 0 initial-chain 0) 5)
+(check-expect (find-closest 400 400 0 initial-chain 0) 4)
 
 (define (click-handler ws x y me)
   (cond
     [(string=? me "button-down") (cond
                                   [(< (get-distance x y (calc-circle-x ws (find-closest x y 0 ws 0)) (calc-circle-y ws (find-closest x y 0 ws 0))) circle-radius)
-                                   (make-markov-chain (markov-chain-nodes ws) (markov-chain-current-node ws)
-                                                      (make-gui-state (find-closest x y 0 ws 0) (gui-state-connection-selected (markov-chain-gui ws))))]
+                                   (update-gui ws (update-gui-node (markov-chain-gui ws) (find-closest x y 0 ws 0)))]
                                   [else ws])]
     [else ws]))
 
-;;An example of an initial-chain (a world state)
-#|(define initial-chain
-  (add-node-to-chain (make-markov-node 79 '(.1 .1 .2 .2 .2 .2))
-  (add-node-to-chain (make-markov-node 76 '(.2 .2 .2 .2 .2))
-  (add-node-to-chain (make-markov-node 72 '(.25 .25 .25 .25))
-  (add-node-to-chain (make-markov-node 67 '(.2 .25 .5))
-  (add-node-to-chain (make-markov-node 64 '(.5 .5))
-  (add-node-to-chain (make-markov-node 60 '(1)) (make-markov-chain '() 0 starting-gui-state))))))))
-|#
+;;END OF CLICK HANDLER
+
+
+
+
+
+
 
 ;; The initial state of the world is a markov-chain starting with this list-of-markov-nodes and these connections (This sample initial-chain is from mary had a little lamb)
 (define initial-chain
@@ -380,9 +478,17 @@
 ) 0 starting-gui-state)
 )
 
+
+;;END OF CHAIN DEFINITIONS
+
+
+
+
+
+
 ;; The world state of this big-bang is a markov-chain
 (big-bang initial-chain
           [to-draw draw-handler]
-          [on-tick tick-handler 1/5]
+          [on-tick tick-handler 1/10]
           [on-key key-handler]
           [on-mouse click-handler])
