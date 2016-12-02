@@ -67,7 +67,9 @@
 (define map-height 600)
 
 ;;The gui-state that the program starts in and will be used for some check-expect type things
-(define starting-gui-state (make-gui-state 0 0 5 0))
+(define starting-gui-state (make-gui-state 0 0 2 0))
+
+(define max-tick 10)
 
 ;; the markov-map is the graphic interface where all the markov-nodes can be viewed and adjusted
 ;; For now, the markov-map is the red rectangular outline and the numbers representing the note
@@ -86,7 +88,7 @@
 ;; the distance each node sits from the center point
 (define map-radius 200)
 ;; the radius of the circle that represents a node
-(define circle-radius 75)
+(define circle-radius 60)
 
 ;;The list of midi note names in order
 (define midi-names '("C" "C#" "D" "D#" "E" "F" "F#" "G" "G#" "A" "A#" "B"))
@@ -393,8 +395,8 @@
     
   [(= (gui-state-tick-rate (markov-chain-gui ws)) (gui-state-tick-count (markov-chain-gui ws)))
    (invboth 
-   (make-markov-chain (markov-chain-nodes ws) (get-next-node ws) (update-gui-tickcount (markov-chain-gui ws) 0))
-   (pstream-queue p (synth-note "main" 35 (markov-node-midi (list-ref (markov-chain-nodes ws) (markov-chain-current-node ws))) (/ FRAME-RATE 5)) (pstream-current-frame p)))]
+   (make-markov-chain (markov-chain-nodes ws) (get-next-node ws) (update-gui-rate (update-gui-tickcount (markov-chain-gui ws) 0) (max 1 (min max-tick (+ (gui-state-tick-rate (markov-chain-gui ws)) (- (random 1 5) 3))))))
+   (pstream-queue p (synth-note "main" 35 (markov-node-midi (list-ref (markov-chain-nodes ws) (markov-chain-current-node ws))) (* (/ FRAME-RATE 5) (gui-state-tick-rate (markov-chain-gui ws)))) (pstream-current-frame p)))]
   [else
    (update-gui ws (update-gui-tickcount (markov-chain-gui ws) (add1 (gui-state-tick-count (markov-chain-gui ws)))))
    ]))
@@ -425,6 +427,10 @@
                                         (update-gui-connection (markov-chain-gui ws) (max 0 (- (gui-state-connection-selected (markov-chain-gui ws)) 1))))]
     [(key=? ke "down") (make-markov-chain (markov-chain-nodes ws) (markov-chain-current-node ws)
                                         (update-gui-connection (markov-chain-gui ws) (min (sub1 (length (markov-chain-nodes ws))) (+ (gui-state-connection-selected (markov-chain-gui ws)) 1))))]
+    [(key=? ke "a") frosty]
+    [(key=? ke "s") jingle-bells]
+    [(key=? ke "d") misirlou]
+    [(key=? ke "f") ghostbusters]
     [else ws])
   )
 
@@ -478,6 +484,64 @@
 ) 0 starting-gui-state)
 )
 
+
+(define frosty
+  (make-markov-chain (list
+(make-markov-node 35 (list 0 0 11/201 26/201 10/67 9/67 16/201 14/67 26/201 11/201 4/67 ))
+(make-markov-node 38 (list 1/149 6/149 39/149 7/149 29/149 7/149 12/149 13/149 19/149 12/149 4/149 ))
+(make-markov-node 42 (list 131/273 145/546 31/546 19/546 5/273 5/273 2/273 1/26 1/26 17/546 1/91 ))
+(make-markov-node 52 (list 0 5/99 23/99 1/99 38/99 4/99 0 7/33 1/99 1/99 5/99 ))
+(make-markov-node 55 (list 0 1/50 3/40 49/200 9/200 1/50 3/40 81/200 11/200 3/200 9/200 ))
+(make-markov-node 57 (list 0 1/116 9/116 3/58 3/116 2/29 0 35/58 3/58 11/116 1/58 ))
+(make-markov-node 59 (list 0 1/20 1/60 1/10 17/60 0 11/60 0 2/15 3/20 1/12 ))
+(make-markov-node 60 (list 0 1/173 13/346 27/346 73/346 29/173 1/346 11/173 41/173 49/346 19/346 ))
+(make-markov-node 64 (list 0 2/221 15/221 20/221 42/221 8/221 7/221 83/221 6/221 1/221 37/221 ))
+(make-markov-node 65 (list 0 1/98 13/98 3/98 3/49 13/98 13/98 22/49 0 2/49 1/98 ))
+(make-markov-node 67 (list 0 1/136 1/68 1/68 27/136 3/136 11/136 13/136 8/17 3/34 1/136 ))
+) 0 starting-gui-state))
+
+
+(define jingle-bells
+  (make-markov-chain (list
+(make-markov-node 28 (list 0 0 0 0 0 0 0 0 0 ))
+(make-markov-node 29 (list 25/171 1/38 5/171 25/38 2/171 1/38 13/342 1/171 10/171 ))
+(make-markov-node 30 (list 0 2/149 0 0 80/149 28/149 36/149 3/149 0 ))
+(make-markov-node 44 (list 0 0 1 0 0 0 0 0 0 ))
+(make-markov-node 60 (list 3/152 4/57 0 0 5/57 29/114 1/4 13/114 31/152 ))
+(make-markov-node 65 (list 5/254 6/127 0 0 239/508 61/508 49/254 9/254 29/254 ))
+(make-markov-node 69 (list 13/537 7/179 0 0 107/537 235/537 110/537 7/179 10/179 ))
+(make-markov-node 72 (list 8/207 1/23 0 0 35/207 25/207 88/207 8/207 34/207 ))
+(make-markov-node 83 (list 61/204 101/204 0 1/136 11/204 19/408 19/408 7/408 7/204 ))
+) 0 starting-gui-state))
+
+(define misirlou
+  (make-markov-chain (list
+(make-markov-node 38 (list 11/207 17/207 25/207 29/207 8/69 5/69 20/207 10/69 11/207 25/207 ))
+(make-markov-node 40 (list 1/242 59/121 3/22 13/242 13/242 2/121 29/242 6/121 1/242 9/121 ))
+(make-markov-node 42 (list 27/53 20/371 12/371 4/53 12/371 16/371 10/371 26/371 16/371 6/53 ))
+(make-markov-node 47 (list 1/118 8/177 11/59 259/354 2/177 0 2/177 1/354 1/354 0 ))
+(make-markov-node 52 (list 1/372 1/62 3/31 1/372 59/186 11/62 14/93 35/186 0 3/62 ))
+(make-markov-node 59 (list 0 8/281 16/281 3/281 70/281 37/281 87/281 47/281 0 13/281 ))
+(make-markov-node 64 (list 0 7/388 37/388 1/388 35/194 75/388 37/194 24/97 5/194 9/194 ))
+(make-markov-node 68 (list 1/150 1/75 8/75 2/225 11/90 77/450 43/225 149/450 1/90 17/450 ))
+(make-markov-node 69 (list 0 1/73 29/146 0 1/73 1/73 5/146 5/73 87/146 9/146 ))
+(make-markov-node 71 (list 0 2/121 79/363 1/363 14/363 1/33 13/363 19/363 2/121 214/363 ))
+) 0 starting-gui-state))
+
+(define ghostbusters
+  (make-markov-chain (list
+(make-markov-node 35 (list 0 41/151 0 0 101/151 0 9/151 0 0 0 0 ))
+(make-markov-node 36 (list 3/172 1/344 3/86 3/86 41/172 17/344 17/172 5/172 7/86 109/344 33/344 ))
+(make-markov-node 38 (list 1/99 1/22 1/198 53/198 71/198 0 13/198 0 0 2/9 5/198 ))
+(make-markov-node 40 (list 0 1/44 1/22 1/88 69/88 0 0 1/44 1/88 3/88 3/44 ))
+(make-markov-node 42 (list 1/580 197/580 7/29 1/145 1/5 1/145 3/290 27/580 3/58 53/580 1/290 ))
+(make-markov-node 45 (list 0 29/80 0 0 93/160 0 0 0 3/160 3/160 3/160 ))
+(make-markov-node 54 (list 19/87 25/87 14/87 0 5/87 1/87 14/87 0 5/87 2/87 2/87 ))
+(make-markov-node 64 (list 0 1/61 0 10/61 0 19/61 0 0 26/61 5/61 0 ))
+(make-markov-node 69 (list 0 0 0 3/100 0 29/50 1/20 1/5 1/25 1/25 3/50 ))
+(make-markov-node 71 (list 35/366 1/366 17/183 11/122 12/61 23/366 4/183 5/366 0 58/183 13/122 ))
+(make-markov-node 74 (list 5/37 0 7/111 4/111 0 2/37 7/111 0 0 29/111 43/111 ))
+) 0 starting-gui-state))
 
 ;;END OF CHAIN DEFINITIONS
 
