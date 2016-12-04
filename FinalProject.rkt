@@ -126,6 +126,8 @@
 
 ;; Makes a list of random numbers 0 < rand < 1 of a designated length
 ;; Number -> List-Of-Numbers
+(check-expect (make-random-list 0) '())
+; Given: (make-random-list 2) Expect: list of 2 random numbers between 0 and 1
 (define (make-random-list length)
   (cond
     [(= length 0) '()]
@@ -223,7 +225,9 @@
 ;; markov-node markov-chain -> markov-chain
 (check-expect (add-node-to-chain (make-markov-node 60 '(1)) (make-markov-chain '() 0 starting-gui-state))
               (make-markov-chain (list (make-markov-node 60 '(1))) 0 starting-gui-state))
-;; --------------- ADD CHECK-EXPECTS --------------- * I wasnt sure how to add a second case to check for the random new connections when adding a node *
+;; Given: (add-node-to-chain (make-markov-node 40 '(0.5 0.5)) (make-markov-chain (list (make-markov-node 60 '(1))) 0 starting-gui-state))
+;; Expect: (make-markov-chain (list (make-markov-node 60 (list 1/(1+random) (random)/(1+random))) (make-markov-node 40 (list 0.5 0.5))) 0 (make-gui-state 0 0 2 0 0.5))
+;; where random represents the random number between 0 and 1 that is being added as a connection
 (define (add-node-to-chain node chain)
   (make-markov-chain (append (alert-all-nodes-add (markov-chain-nodes chain)) (list node)) (markov-chain-current-node chain) (markov-chain-gui chain))
   )
@@ -231,7 +235,7 @@
 ;; Alert all nodes in list-of-markov-nodes of a new node
 ;; list: the list-of-markov-nodes of a markov-chain
 ;; list-of-markov-nodes -> list-of-markov-nodes (updates connection field)
-;; --------------- ADD CHECK-EXPECTS ---------------
+;; Given: (alert-all-nodes-add (list (make-markov-node 50 '(1)))) Expect: (list (make-markov-node 50 (list 1/(1 + random) (random)/(1 + random))) Numbers in list add up to 1
 (define (alert-all-nodes-add list)
   (cond
     [(empty? list) '()]
@@ -242,7 +246,7 @@
 ;; Adds a new, random connection to the markov-node, then normalizes all of that markov-node's connections
 ;; node: the markov-node whose connections are being adjusted
 ;; markov-node -> markov-node 
-;; --------------- ADD CHECK-EXPECTS --------------- (note: how do you check the code when it calls for a random value?)
+;; Given: (node-alert-chain-add (make-markov-node 30 '(1))) Expect: (make-markov-node 30 (list 1/(1 + random) (random)/(1 + random))) Numbers in list add up to 1
 (define (node-alert-chain-add node)
   (make-markov-node (markov-node-midi node)
                     (normalize-node (append (markov-node-connections node) (list (random)))))
@@ -273,12 +277,21 @@
 
 ;; updates the current-node (index number) of markov-chain to reflect the next node and changes the "active" node (and thus changes which node is lit up on the markov-map)
 ;; markov-chain -> number
+;; Given: (get-next-node (make-markov-chain (list (make-markov-node 50 '(0.7 0.3)) (make-markov-node 30 '(0.4 0.6))) 1 starting-gui-state))
+;; Expect: 0 if the random number generated is < 0.4, 1 if the random number generated is >= 0.4
 (define (get-next-node chain)
   (pick-node-based-on-weights (markov-node-connections (list-ref (markov-chain-nodes chain) (markov-chain-current-node chain))) 0 (random))
   )
 
 ;; Call this with the node's weights, 0 and a random floating point number in 0 < rand < 1
-;; Number List, 0, 0 < rand < 1 -> Number
+;; Given a list of connections for a specific node, generates a random number between 0 and 1 and determines which range of numbers this random number falls into.
+;; Returns the index number with the correct range.
+;; List-of-numbers, 0, 0 < rand < 1 -> Number
+(check-expect (pick-node-based-on-weights '() 0 0.33) 0)
+(check-expect (pick-node-based-on-weights (list 0.1 0.3 0.6) 0 0.09) 0)
+(check-expect (pick-node-based-on-weights (list 0.1 0.3 0.6) 0 0.1) 1)
+(check-expect (pick-node-based-on-weights (list 0.1 0.3 0.6) 0 0.23) 1)
+(check-expect (pick-node-based-on-weights (list 0.1 0.3 0.6) 0 0.85) 2)
 (define (pick-node-based-on-weights weights inc rand)
   (cond
     [(empty? weights) 0]
@@ -294,6 +307,10 @@
 ;;Connection: The index of the connection to be changed
 ;;Delta: The amount to change it
 ;;Note - This function will never let a connection go below 0
+(check-expect (change-connection (make-markov-chain (list (make-markov-node 50 '(0.7 0.3)) (make-markov-node 30 '(0.4 0.6))) 0 starting-gui-state) 0 1 0.4)
+              (make-markov-chain (list (make-markov-node 50 (list 0.5 0.5)) (make-markov-node 30 (list 0.4 0.6))) 0 (make-gui-state 0 0 2 0 0.5)))
+(check-expect (change-connection (make-markov-chain (list (make-markov-node 50 '(0.7 0.3)) (make-markov-node 30 '(0.3 0.7))) 0 starting-gui-state) 1 1 0.2)
+              (make-markov-chain (list (make-markov-node 50 (list 0.7 0.3)) (make-markov-node 30 (list 0.25 0.75))) 0 (make-gui-state 0 0 2 0 0.5)))
 (define (change-connection chain node connection delta)
   (make-markov-chain (list-set (markov-chain-nodes chain)
                                node
