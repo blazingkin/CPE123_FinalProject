@@ -29,11 +29,17 @@
 ;; World Definitions
 
 
-(define-struct gui-state [node-selected connection-selected tick-rate tick-count])
+(define-struct gui-state [node-selected connection-selected tick-rate tick-count volume])
 ;;A gui-state is a structure:
-;; (make-gui-state Number)
+;; (make-gui-state Number Number Number Number Number)
 ;; interpretation: A Gui state has:
-;; - Node-selected: an integer corresponding to the index of the selected node
+;; - node-selected: an integer corresponding to the index of the selected node
+;; - connection-selected: the index of the currently selected connection
+;; - tick-rate: the length of the current note in ticks
+;; - tick-count: the current "tick-index" of the note being played
+;;               the tick-count starts at 0 and increments every time the clock ticks
+;;               when tick-count = tick-rate, the current note has finished playing, and tick-count resets to 0
+;; - volume: a number between 0.0 and 1.0 that reflects the volume of the audio
 
 (define-struct markov-node [midi connections])
 ;; A markov-node is a structure:
@@ -44,10 +50,11 @@
 
 (define-struct markov-chain [nodes current-node gui])
 ;; A markov-chain is a structure:
-;;  (make-markov-chain list-of-markov-nodes Number)
+;;  (make-markov-chain list-of-markov-nodes Number gui-state)
 ;; interpretation: A markov-chain has
 ;; - nodes: a list of markov-nodes in the markov-chain
 ;; - current-node: a integer value corresponding to the current index of the markov-chain list
+;; - gui: a gui-state
 
 ;;END OF WORLD DEFINITIONS
 
@@ -67,8 +74,10 @@
 (define map-height 600)
 
 ;;The gui-state that the program starts in and will be used for some check-expect type things
-(define starting-gui-state (make-gui-state 0 0 2 0))
+(define starting-gui-state (make-gui-state 0 0 2 0 0.5))
 
+
+;; the maximum possible length of a note (in ticks) note-length
 (define max-tick 10)
 
 ;; the markov-map is the graphic interface where all the markov-nodes can be viewed and adjusted
@@ -90,6 +99,17 @@
 ;; the radius of the circle that represents a node
 (define circle-radius 60)
 
+;; the width and height of the volume rectangle
+(define vol-bg-height 30)
+(define vol-bg-width 190)
+;; the volume background
+(define vol-bg (rectangle vol-bg-width vol-bg-height "solid" "gray"))
+;; the width and height of the volume slider
+(define vol-slider-height 25)
+(define vol-slider-width 30)
+;; the volume slider box
+(define vol-slider (rectangle vol-slider-width vol-slider-height "solid" "black"))
+
 ;;The list of midi note names in order
 (define midi-names '("C" "C#" "D" "D#" "E" "F" "F#" "G" "G#" "A" "A#" "B"))
 
@@ -104,16 +124,19 @@
 
 
 
-;; Makes a list of random numbers 0 < rand < 1 of a given length
+;; Makes a list of random numbers 0 < rand < 1 of a designated length
 ;; Number -> List-Of-Numbers
 (define (make-random-list length)
   (cond
     [(= length 0) '()]
     [else (cons (random) (make-random-list (- length 1)))]))
 
-;;Sets a particular index of a list to value
-;;List, Number, Value -> List
+;;Sets a particular index of a list to specified value
 ;;If the index is out of range of the list, the original list will be returned
+;; list: a list of values
+;; index: the index of the value to be changed
+;; value: the new value to replace the original
+;; List Number Value -> List
 (define (list-set list index value)
   (cond
     [(empty? list) '()]
@@ -122,6 +145,7 @@
 (check-expect (list-set (list 1 2 3) 0 0) (list 0 2 3))
 (check-expect (list-set '() 0 0) '())
 (check-expect (list-set (list 3 4 5) 1 1) (list 3 1 5))
+(check-expect (list-set (list 0 1 2 3 4) 1 4) (list 0 4 2 3 4))
 
 ;; computes the sum of all elements in a list
 ;; list: a list of numbers
@@ -136,32 +160,53 @@
 (check-expect (sum-of-list '()) 0)
 
 ;;Finds the Euclidean distance between two points
+;; x_1: the x-coordinate of the first point
+;; y_1: the y-coordinate of the first point
+;; x_2: the x-coordinate of the second point
+;; y_2: the y-coordinate of the second point
+;; number number number number -> number
 (define (get-distance x_1 y_1 x_2 y_2)
   (sqrt (+ (sqr (- x_2 x_1)) (sqr (- y_2 y_1)))))
 (check-expect (get-distance 0 0 3 4) 5)
 (check-expect (get-distance 0 0 0 0) 0)
 (check-expect (get-distance 0 1 0 0) 1)
 
-;;Update GUI connection
-(define (update-gui-connection gui newcon)
-  (make-gui-state (gui-state-node-selected gui) newcon (gui-state-tick-rate gui) (gui-state-tick-count gui)))
-
 ;;Update GUI selection
+;; gui-state number -> gui-state
 (define (update-gui-node gui newnode)
-  (make-gui-state newnode (gui-state-connection-selected gui) (gui-state-tick-rate gui) (gui-state-tick-count gui)))
+  (make-gui-state newnode (gui-state-connection-selected gui) (gui-state-tick-rate gui) (gui-state-tick-count gui) (gui-state-volume gui)))
+(check-expect (update-gui-node (make-gui-state 0 0 2 0 0.5) 2) (make-gui-state 2 0 2 0 0.5))
+
+;;Update GUI connection
+;; gui-state number -> gui-state
+(define (update-gui-connection gui newcon)
+  (make-gui-state (gui-state-node-selected gui) newcon (gui-state-tick-rate gui) (gui-state-tick-count gui) (gui-state-volume gui)))
+(check-expect (update-gui-connection (make-gui-state 0 0 2 0 0.5) 3) (make-gui-state 0 3 2 0 0.5))
 
 ;;Update GUI Tick Rate
+;; gui-state number -> gui-state
 (define (update-gui-rate gui tickrate)
-  (make-gui-state (gui-state-node-selected gui) (gui-state-connection-selected gui) tickrate (gui-state-tick-count gui)))
+  (make-gui-state (gui-state-node-selected gui) (gui-state-connection-selected gui) tickrate (gui-state-tick-count gui) (gui-state-volume gui)))
+(check-expect (update-gui-rate (make-gui-state 0 0 2 0 0.5) 4) (make-gui-state 0 0 4 0 0.5))
 
 ;;Update GUI Tick Count
+;; gui-state number -> gui-state
 (define (update-gui-tickcount gui tickcount)
-  (make-gui-state (gui-state-node-selected gui) (gui-state-connection-selected gui) (gui-state-tick-rate gui) tickcount))
+  (make-gui-state (gui-state-node-selected gui) (gui-state-connection-selected gui) (gui-state-tick-rate gui) tickcount (gui-state-volume gui)))
+(check-expect (update-gui-tickcount (make-gui-state 0 0 2 0 0.5) 1) (make-gui-state 0 0 2 1 0.5))
+
+;;Update GUI Volume
+;; gui-state number -> gui-state
+(define (update-gui-volume gui volume)
+  (make-gui-state (gui-state-node-selected gui) (gui-state-connection-selected gui) (gui-state-tick-rate gui) (gui-state-tick-count gui) volume))
+(check-expect (update-gui-volume (make-gui-state 0 0 2 0 0.5) 0.8) (make-gui-state 0 0 2 0 0.8))
 
 ;;Update GUI
+;; markov-chain gui-state -> markov-chain
 (define (update-gui chain newgui)
   (make-markov-chain (markov-chain-nodes chain) (markov-chain-current-node chain) newgui))
-
+(check-expect (update-gui (make-markov-chain (list (make-markov-node 50 '(0.5 0.5)) (make-markov-node 50 '(0.7 0.3))) 0 starting-gui-state) (make-gui-state 0 3 2 0 0.9))
+              (make-markov-chain (list (make-markov-node 50 '(0.5 0.5)) (make-markov-node 50 '(0.7 0.3))) 0 (make-gui-state 0 3 2 0 0.9)))
 
 ;;END OF UTILITY FUNCTIONS
 
@@ -269,19 +314,22 @@
 
 
 
-;; Draws the connection strengths and nodes with corresponding name onto the markov-map
+;; Draws the connection strengths, nodes, and volume slider onto the markov-map
 (define (draw-handler ws)
-  (place-image
-   (draw-connections ws 0)
-   150
-   300
-   (draw-circles ws 0))
-  )
+  (place-images
+    (list (draw-connections ws 0)
+          (draw-vol-slider ws)
+          (draw-circles ws 0))
+    (list (make-posn 150 300)
+          (make-posn 1100 20)
+          (make-posn map-center-x map-center-y))
+    markov-map))
 
 ;; Draws the connections of one particular node to itself and all the other nodes
 ;; Should always be called with index as 0 (loops through the list-of-markov-nodes starting at index: 0)
+;; chain: a markov-chain
 ;; Index: number representing a certain element of list-of-markov-nodes
-;; Markov-Chain -> Image 
+;; Markov-Chain number -> Image 
 (define (draw-connections chain index)
   (cond
     [(= index (length (markov-chain-nodes chain)))
@@ -300,6 +348,7 @@
 ;; Node2: A node in the Markov-Chain at a specific index number
 ;; Index: number represinting a certain element of the list-of-markov-nodes
 ;; Selected: The index of the selected connection
+;; markov-node markov-node number number -> image
 (define (draw-connection-line node1 node2 index selected)
   (text (string-append  (get-node-name node1) " → "
                        (get-node-name node2) " : "
@@ -308,6 +357,7 @@
                          [else "white"])))
 
 ;; Returns the x-coordinate where the node should be drawn (depends on how many markov-nodes are in the list-of-markov-nodes)
+;; chain: a markov-chain
 ;; Index: number representing a certain element of the list-of-markov-nodes
 ;; Markov-Chain Number -> Number
 (define (calc-circle-x chain index)
@@ -316,6 +366,7 @@
 (check-within (calc-circle-x (make-markov-chain (list (make-markov-node 50 '(0.5 0.5)) (make-markov-node 50 '(0.7 0.3))) 0 starting-gui-state) 1)
               (+ map-center-x (* map-radius (cos (- (/ (* 2 pi 1) 2) (/ pi 2))))) 1e-8)
 ;; Returns the y-coordinate where the node should be drawn
+;; chain: a markov-chain
 ;; Index: number representing a certain element of the list-of-markov-nodes
 ;; Markov-Chain Number -> Number
 (define (calc-circle-y chain index)
@@ -326,6 +377,7 @@
 
 ;; Draws circles for all markov-nodes in list-of-markov-nodes of markov-chain in a circular pattern
 ;; Should always be called with index as 0 (loops through the list-of-markov-nodes starting at index: 0)
+;; chain: a markov-chain
 ;; Index: number representing a certain element of list-of-markov-nodes
 ;; Markov-Chain Number -> Image
 (define (draw-circles chain index)
@@ -339,6 +391,7 @@
 
 ;; Generates the name of a node
 ;; Markov-Node -> String
+;; ----------------------- ADD CHECK-EXPECTS ---------------------
 (define (get-node-name node)
   (string-append (list-ref midi-names (modulo (markov-node-midi node) 12)) (number->string (floor (/ (markov-node-midi node) 12)))))
 
@@ -378,6 +431,14 @@
                circle-radius
                (circle circle-radius "solid" "green")))
 
+
+;; draw the volume slider
+;; markov-chain -> image
+(define (draw-vol-slider ws)
+  (place-image vol-slider (* (gui-state-volume (markov-chain-gui ws)) vol-bg-width) (/ vol-bg-height 2) vol-bg))
+(check-expect (draw-vol-slider (make-markov-chain (list (make-markov-node 50 '(0.5 0.5)) (make-markov-node 50 '(0.7 0.3))) 0 starting-gui-state))
+              (place-image (rectangle vol-slider-width vol-slider-height "solid" "black") 95 15 vol-bg))
+
 ;;END OF DRAW LOGIC
 
 
@@ -387,8 +448,8 @@
 
 
 ;; On each clock tick:
-;; Create and return a markov-chain with the same list-of-markov-nodes but a new index
-;; Queue the note corresponding to the current node (based on the index)
+;; - Create and return a markov-chain with the same list-of-markov-nodes but a new index
+;; - Queue the note corresponding to the current node (based on the index)
 ;; Markov-Chain -> Markov-Chain
 (define (tick-handler ws)
   (cond
@@ -396,7 +457,13 @@
   [(= (gui-state-tick-rate (markov-chain-gui ws)) (gui-state-tick-count (markov-chain-gui ws)))
    (invboth 
    (make-markov-chain (markov-chain-nodes ws) (get-next-node ws) (update-gui-rate (update-gui-tickcount (markov-chain-gui ws) 0) (max 1 (min max-tick (+ (gui-state-tick-rate (markov-chain-gui ws)) (- (random 1 5) 3))))))
-   (pstream-queue p (synth-note "main" 35 (markov-node-midi (list-ref (markov-chain-nodes ws) (markov-chain-current-node ws))) (* (/ FRAME-RATE 5) (gui-state-tick-rate (markov-chain-gui ws)))) (pstream-current-frame p)))]
+   (pstream-queue p
+                  (rs-scale (gui-state-volume (markov-chain-gui ws))
+                            (synth-note "main"
+                                        35
+                                        (markov-node-midi (list-ref (markov-chain-nodes ws) (markov-chain-current-node ws)))
+                                        (* (/ FRAME-RATE 5) (gui-state-tick-rate (markov-chain-gui ws)))))
+                  (pstream-current-frame p)))]
   [else
    (update-gui ws (update-gui-tickcount (markov-chain-gui ws) (add1 (gui-state-tick-count (markov-chain-gui ws)))))
    ]))
@@ -442,8 +509,13 @@
 
 
 
-;;This takes - A x and y position, 0, the list of nodes, 0
-;;X pos, Y pos, 0, markov-chain, 0 -> The index of the highest node
+;; finds which node is closest to a given x- and y-position
+;; x: the x-position
+;; y: the y-position
+;; index: a number indicating the index of the node (always starts at 0)
+;; chain: a markov-chain
+;; prevlowest: the index of the last node checked (always starts at 0)
+;; number number number markov-chain number -> number
 (define (find-closest x y index chain prevlowest)
   (cond
     [(= index (length (markov-chain-nodes chain))) prevlowest]
@@ -456,12 +528,25 @@
 (check-expect (find-closest 0 0 0 initial-chain 0) 5)
 (check-expect (find-closest 400 400 0 initial-chain 0) 4)
 
+
+;; when the mouse clicks:
+;; - if it is within the bounds of the volume slider: updates the volume
+;; - if it is within the bounds of one of the nodes: updates the current node selected
+;; - otherwise: does nothing
+;; when the mouse drags:
+;; - if it is within the bounds of the volume slider: updates the volume
+;; - otherwise: does nothing
+;; markov-chain number number string -> ws
 (define (click-handler ws x y me)
   (cond
     [(string=? me "button-down") (cond
-                                  [(< (get-distance x y (calc-circle-x ws (find-closest x y 0 ws 0)) (calc-circle-y ws (find-closest x y 0 ws 0))) circle-radius)
-                                   (update-gui ws (update-gui-node (markov-chain-gui ws) (find-closest x y 0 ws 0)))]
-                                  [else ws])]
+                                   [(and (and (>= x 1005) (<= x 1195)) (and (>= y 5) (<= y 35))) (update-gui ws (update-gui-volume (markov-chain-gui ws) (/ (- x 1005) vol-bg-width)))]
+                                   [(< (get-distance x y (calc-circle-x ws (find-closest x y 0 ws 0)) (calc-circle-y ws (find-closest x y 0 ws 0))) circle-radius)
+                                    (update-gui ws (update-gui-node (markov-chain-gui ws) (find-closest x y 0 ws 0)))]
+                                   [else ws])]
+    [(string=? me "drag") (cond
+                            [(and (and (>= x 1005) (<= x 1195)) (and (>= y 5) (<= y 35))) (update-gui ws (update-gui-volume (markov-chain-gui ws) (/ (- x 1005) vol-bg-width)))]
+                            [else ws])]
     [else ws]))
 
 ;;END OF CLICK HANDLER
