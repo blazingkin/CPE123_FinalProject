@@ -504,8 +504,8 @@
     [(= index (length (markov-chain-nodes chain))) image]
     [(= index node-on) (add-lines chain node-on (add1 index) (place-image
                                                               (circle (/ circle-radius 2) "outline" (get-pen chain node-on index))
-                                                              (- (calc-circle-x chain node-on) (* circle-radius (cos (/ (* 2 pi node-on) (length (markov-chain-nodes chain))))))
-                                                              (- (calc-circle-y chain node-on) (* circle-radius (sin (/ (* 2 pi node-on) (length (markov-chain-nodes chain))))))
+                                                              (- (calc-circle-x chain node-on) (* circle-radius (cos (+ (/ pi 2) (/ (* 2 pi node-on) (length (markov-chain-nodes chain)))))))
+                                                              (- (calc-circle-y chain node-on) (* circle-radius (sin (+ (/ pi 2) (/ (* 2 pi node-on) (length (markov-chain-nodes chain)))))))
                                                               image))]
     [else (add-lines chain node-on (add1 index) (add-line image (calc-circle-x chain node-on) (calc-circle-y chain node-on) (calc-circle-x chain index) (calc-circle-y chain index) (get-pen chain node-on index)))])
   )
