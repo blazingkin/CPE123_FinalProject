@@ -116,6 +116,11 @@
 ;;The font size of the text inside each markov node
 (define node-text-size 24)
 
+;; gray mute button for when the volume is on
+(define mute-gray (place-image (text "Mute" 12 "black") 25 15 (rectangle 50 30 "solid" "gray")))
+;; red mute button for when the volume is muted
+(define mute-red (place-image (text "Mute" 12 "black") 25 15 (rectangle 50 30 "solid" "red")))
+
 ;;END OF VARIABLES
 
 
@@ -210,6 +215,19 @@
 (check-expect (update-gui (make-markov-chain (list (make-markov-node 50 '(0.5 0.5)) (make-markov-node 50 '(0.7 0.3))) 0 starting-gui-state) (make-gui-state 0 3 2 0 0.9))
               (make-markov-chain (list (make-markov-node 50 '(0.5 0.5)) (make-markov-node 50 '(0.7 0.3))) 0 (make-gui-state 0 3 2 0 0.9)))
 
+;; mute or unmute the volume
+;; if the volume is already 0.0: change it to 0.5
+;; otherwise: change the volume to 0.0
+;; markov-chain -> markov-chain
+(define (mute ws)
+  (cond
+    [(= (gui-state-volume (markov-chain-gui ws)) 0.0) (update-gui ws (update-gui-volume (markov-chain-gui ws) 0.5))]
+    [else (update-gui ws (update-gui-volume (markov-chain-gui ws) 0.0))]))
+(check-expect (mute (make-markov-chain (list (make-markov-node 50 '(0.5 0.5)) (make-markov-node 50 '(0.7 0.3))) 0 (make-gui-state 0 3 2 0 0.9)))
+                    (make-markov-chain (list (make-markov-node 50 '(0.5 0.5)) (make-markov-node 50 '(0.7 0.3))) 0 (make-gui-state 0 3 2 0 0.0)))
+(check-expect (mute (make-markov-chain (list (make-markov-node 50 '(0.5 0.5)) (make-markov-node 50 '(0.7 0.3))) 0 (make-gui-state 0 3 2 0 0.0)))
+                    (make-markov-chain (list (make-markov-node 50 '(0.5 0.5)) (make-markov-node 50 '(0.7 0.3))) 0 (make-gui-state 0 3 2 0 0.5)))
+  
 ;;END OF UTILITY FUNCTIONS
 
 
@@ -335,10 +353,14 @@
 (define (draw-handler ws)
   (place-images
     (list (draw-connections ws 0)
+          (text "Volume: " 18 "black")
           (draw-vol-slider ws)
+          (draw-mute-button ws)
           (draw-circles ws 0))
     (list (make-posn 150 300)
+          (make-posn 965 20)
           (make-posn 1100 20)
+          (make-posn 1030 60)
           (make-posn map-center-x map-center-y))
     markov-map))
 
@@ -456,6 +478,20 @@
 (check-expect (draw-vol-slider (make-markov-chain (list (make-markov-node 50 '(0.5 0.5)) (make-markov-node 50 '(0.7 0.3))) 0 starting-gui-state))
               (place-image (rectangle vol-slider-width vol-slider-height "solid" "black") 95 15 vol-bg))
 
+;; draw the mute-button
+;; mute-button is:
+;; - mute-gray, if volume is anything but 0.0
+;; - mute-red, if volume is 0.0
+;; markov-chain -> image
+(define (draw-mute-button ws)
+  (cond
+    [(= (gui-state-volume (markov-chain-gui ws)) 0.0) mute-red]
+    [else mute-gray]))
+(check-expect (draw-mute-button (make-markov-chain (list (make-markov-node 50 '(0.5 0.5)) (make-markov-node 50 '(0.7 0.3))) 0 (make-gui-state 0 0 2 0 0.5)))
+              mute-gray)
+(check-expect (draw-mute-button (make-markov-chain (list (make-markov-node 50 '(0.5 0.5)) (make-markov-node 50 '(0.7 0.3))) 0 (make-gui-state 0 0 2 0 0.0)))
+              mute-red)
+
 ;;END OF DRAW LOGIC
 
 
@@ -511,6 +547,7 @@
                                         (update-gui-connection (markov-chain-gui ws) (max 0 (- (gui-state-connection-selected (markov-chain-gui ws)) 1))))]
     [(key=? ke "down") (make-markov-chain (markov-chain-nodes ws) (markov-chain-current-node ws)
                                         (update-gui-connection (markov-chain-gui ws) (min (sub1 (length (markov-chain-nodes ws))) (+ (gui-state-connection-selected (markov-chain-gui ws)) 1))))]
+    [(key=? ke "m") (mute ws)]
     [(key=? ke "a") frosty]
     [(key=? ke "s") jingle-bells]
     [(key=? ke "d") misirlou]
@@ -558,6 +595,7 @@
   (cond
     [(string=? me "button-down") (cond
                                    [(and (and (>= x 1005) (<= x 1195)) (and (>= y 5) (<= y 35))) (update-gui ws (update-gui-volume (markov-chain-gui ws) (/ (- x 1005) vol-bg-width)))]
+                                   [(and (and (>= x 1005) (<= x 1055)) (and (>= y 45) (<= y 75))) (mute ws)]
                                    [(< (get-distance x y (calc-circle-x ws (find-closest x y 0 ws 0)) (calc-circle-y ws (find-closest x y 0 ws 0))) circle-radius)
                                     (update-gui ws (update-gui-node (markov-chain-gui ws) (find-closest x y 0 ws 0)))]
                                    [else ws])]
