@@ -126,9 +126,12 @@
 
 ;;The text that shows on startup in reverse order of this list
 (define intro-text (list "Press H to toggle this help menu"
+                         "Press R to reset the program"
+                         "Press M to Mute"
                          "The volume slider and mute button are in the top right"
                          "Some preset Markov Maps are available by pressing A, S, D or F"
                          "You can press '.' to add a new random node"
+                         "The selected connection will be red, the connection going the other way will be purple"
                          "Use the arrow keys to change the node's connection strength"
                          "Click any node to select it"
                          "You'll be brought to the program!!!"
@@ -137,6 +140,15 @@
 
 ;;The widest the connection line can be
 (define max-line-width 10)
+
+;;The color of the connection lines
+(define connection-line-color "blue")
+
+;;The color of the selected connection
+(define selected-connection-line-color "red")
+
+;;The color of the selected connection that goes the other way
+(define inverse-selected-connection-line-color "purple")
 
 ;;END OF VARIABLES
 
@@ -383,12 +395,14 @@
           (draw-vol-slider ws)
           (draw-mute-button ws)
           (draw-circles ws 0)
+          (loop-through-lines ws 0)
           )
     (list
           (make-posn 150 300)
           (make-posn 965 20)
           (make-posn 1100 20)
           (make-posn 1030 60)
+          (make-posn map-center-x map-center-y)
           (make-posn map-center-x map-center-y)
           )
     markov-map)]))
@@ -468,9 +482,23 @@
 (check-within (calc-circle-y (make-markov-chain (list (make-markov-node 40 '(0.5 0.5)) (make-markov-node 70 '(0.7 0.3))) 0 starting-gui-state) 0)
               (+ map-center-y (* map-radius (sin (- (/ (* 2 pi 0) 2) (/ pi 2))))) 1e-8)
 
+;;Get a pen so that our node connection is drawn with the correct thickness
+;;This multiplies a max line width by the weight of the node to get the thickness
 (define (get-pen chain node-on index)
-  "blue")
+  (make-pen (cond
+              [(and (= node-on (gui-state-node-selected (markov-chain-gui chain))) (= index (gui-state-connection-selected (markov-chain-gui chain)))) selected-connection-line-color]
+              [(and (= index (gui-state-node-selected (markov-chain-gui chain))) (= node-on (gui-state-connection-selected (markov-chain-gui chain)))) inverse-selected-connection-line-color]
+              [else connection-line-color]) (floor (* max-line-width (list-ref (markov-node-connections (list-ref (markov-chain-nodes chain) node-on)) index))) "solid" "round" "bevel"))
+(check-expect (get-pen initial-chain 0 0) (make-pen selected-connection-line-color 0 "solid" "round" "bevel"))
 
+;;This function loops through all of the connections and draws the lines
+(define (loop-through-lines chain index)
+  (cond
+    [(= (length (markov-chain-nodes chain)) index) markov-map]
+    [else (add-lines chain index 0 (loop-through-lines chain (add1 index)))]))
+;;Returns an image... check-expect possible?
+
+;;Draws all the lines for one node's connections
 (define (add-lines chain node-on index image)
   (cond
     [(= index (length (markov-chain-nodes chain))) image]
@@ -481,6 +509,7 @@
                                                               image))]
     [else (add-lines chain node-on (add1 index) (add-line image (calc-circle-x chain node-on) (calc-circle-y chain node-on) (calc-circle-x chain index) (calc-circle-y chain index) (get-pen chain node-on index)))])
   )
+;;Returns an image... check-expect possible?
 
 ;; Draws circles for all markov-nodes in list-of-markov-nodes of markov-chain in a circular pattern
 ;; Should always be called with index as 0 (loops through the list-of-markov-nodes starting at index: 0)
@@ -495,7 +524,7 @@
            (draw-node (= index (markov-chain-current-node chain)) (list-ref (markov-chain-nodes chain) index))
            (calc-circle-x chain index)
            (calc-circle-y chain index)
-           (add-lines chain index 0 (draw-circles chain (+ 1 index))))]))
+           (draw-circles chain (+ 1 index)))]))
 
 ;; Generates the name of a node
 ;; Markov-Node -> String
@@ -618,6 +647,7 @@
                                         (update-gui-connection (markov-chain-gui ws) (min (sub1 (length (markov-chain-nodes ws))) (+ (gui-state-connection-selected (markov-chain-gui ws)) 1))))]
     [(key=? ke "h") (update-gui ws (update-gui-in-help (markov-chain-gui ws) (not (gui-state-in-help (markov-chain-gui ws)))))]
     [(key=? ke "m") (mute ws)]
+    [(key=? ke "r") (update-gui initial-chain (update-gui-in-help starting-gui-state #f))]
     [(key=? ke "a") frosty]
     [(key=? ke "s") jingle-bells]
     [(key=? ke "d") misirlou]
