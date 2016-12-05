@@ -128,11 +128,15 @@
 (define intro-text (list "Press H to toggle this help menu"
                          "The volume slider and mute button are in the top right"
                          "Some preset Markov Maps are available by pressing A, S, D or F"
-                         "Use the arrow keys to change the node's connection"
+                         "You can press '.' to add a new random node"
+                         "Use the arrow keys to change the node's connection strength"
                          "Click any node to select it"
                          "You'll be brought to the program!!!"
                          "If you click anywhere..."
                          "WELCOME TO THE WORLD OF TOMORROW!!!"))
+
+;;The widest the connection line can be
+(define max-line-width 10)
 
 ;;END OF VARIABLES
 
@@ -464,6 +468,20 @@
 (check-within (calc-circle-y (make-markov-chain (list (make-markov-node 40 '(0.5 0.5)) (make-markov-node 70 '(0.7 0.3))) 0 starting-gui-state) 0)
               (+ map-center-y (* map-radius (sin (- (/ (* 2 pi 0) 2) (/ pi 2))))) 1e-8)
 
+(define (get-pen chain node-on index)
+  "blue")
+
+(define (add-lines chain node-on index image)
+  (cond
+    [(= index (length (markov-chain-nodes chain))) image]
+    [(= index node-on) (add-lines chain node-on (add1 index) (place-image
+                                                              (circle (/ circle-radius 2) "outline" (get-pen chain node-on index))
+                                                              (- (calc-circle-x chain node-on) (* circle-radius (cos (/ (* 2 pi node-on) (length (markov-chain-nodes chain))))))
+                                                              (- (calc-circle-y chain node-on) (* circle-radius (sin (/ (* 2 pi node-on) (length (markov-chain-nodes chain))))))
+                                                              image))]
+    [else (add-lines chain node-on (add1 index) (add-line image (calc-circle-x chain node-on) (calc-circle-y chain node-on) (calc-circle-x chain index) (calc-circle-y chain index) (get-pen chain node-on index)))])
+  )
+
 ;; Draws circles for all markov-nodes in list-of-markov-nodes of markov-chain in a circular pattern
 ;; Should always be called with index as 0 (loops through the list-of-markov-nodes starting at index: 0)
 ;; chain: a markov-chain
@@ -472,11 +490,12 @@
 (define (draw-circles chain index)
   (cond
     [(= index (length (markov-chain-nodes chain))) markov-map]
-    [else (place-image
+    [else 
+           (place-image
            (draw-node (= index (markov-chain-current-node chain)) (list-ref (markov-chain-nodes chain) index))
            (calc-circle-x chain index)
            (calc-circle-y chain index)
-           (draw-circles chain (+ 1 index)))]))
+           (add-lines chain index 0 (draw-circles chain (+ 1 index))))]))
 
 ;; Generates the name of a node
 ;; Markov-Node -> String
