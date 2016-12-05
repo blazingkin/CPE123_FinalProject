@@ -693,7 +693,7 @@
 (make-markov-node 64 (list 0 2/221 15/221 20/221 42/221 8/221 7/221 83/221 6/221 1/221 37/221 ))
 (make-markov-node 65 (list 0 1/98 13/98 3/98 3/49 13/98 13/98 22/49 0 2/49 1/98 ))
 (make-markov-node 67 (list 0 1/136 1/68 1/68 27/136 3/136 11/136 13/136 8/17 3/34 1/136 ))
-) 0 starting-gui-state))
+) 0 (update-gui-in-help starting-gui-state #f)))
 
 
 (define jingle-bells
@@ -707,7 +707,7 @@
 (make-markov-node 69 (list 13/537 7/179 0 0 107/537 235/537 110/537 7/179 10/179 ))
 (make-markov-node 72 (list 8/207 1/23 0 0 35/207 25/207 88/207 8/207 34/207 ))
 (make-markov-node 83 (list 61/204 101/204 0 1/136 11/204 19/408 19/408 7/408 7/204 ))
-) 0 starting-gui-state))
+) 0 (update-gui-in-help starting-gui-state #f)))
 
 (define misirlou
   (make-markov-chain (list
@@ -721,7 +721,7 @@
 (make-markov-node 68 (list 1/150 1/75 8/75 2/225 11/90 77/450 43/225 149/450 1/90 17/450 ))
 (make-markov-node 69 (list 0 1/73 29/146 0 1/73 1/73 5/146 5/73 87/146 9/146 ))
 (make-markov-node 71 (list 0 2/121 79/363 1/363 14/363 1/33 13/363 19/363 2/121 214/363 ))
-) 0 starting-gui-state))
+) 0 (update-gui-in-help starting-gui-state #f)))
 
 (define ghostbusters
   (make-markov-chain (list
@@ -736,7 +736,7 @@
 (make-markov-node 69 (list 0 0 0 3/100 0 29/50 1/20 1/5 1/25 1/25 3/50 ))
 (make-markov-node 71 (list 35/366 1/366 17/183 11/122 12/61 23/366 4/183 5/366 0 58/183 13/122 ))
 (make-markov-node 74 (list 5/37 0 7/111 4/111 0 2/37 7/111 0 0 29/111 43/111 ))
-) 0 starting-gui-state))
+) 0 (update-gui-in-help starting-gui-state #f)))
 
 ;;END OF CHAIN DEFINITIONS
 
