@@ -9,6 +9,7 @@
 (require rsound/single-cycle)
 (require 2htdp/universe)
 (require 2htdp/image)
+(require slideshow/text)
 
 ;; END OF DEPENDENCIES
 
@@ -121,32 +122,49 @@
 ;; red mute button for when the volume is muted
 (define mute-red (place-image (text "Mute" 12 "black") 25 15 (rectangle 50 30 "solid" "red")))
 
-;;The "gray" (I changed my mind on the color) background for the help screen
-(define gray-background (rectangle map-width map-height "solid" "white"))
+;; reset button
+(define reset-button (place-image (text "Reset" 12 "black") 25 15 (rectangle 50 30 "solid" "gray")))
+
+;; the buttons for the pre-loaded audio tracks
+(define frosty-false (place-image (text "Frosty the Snowman" 12 "black") 65 15 (rectangle 130 30 "solid" "gray")))
+(define frosty-true (place-image (text "Frosty the Snowman" 12 "white") 65 15 (rectangle 130 30 "solid" "CornflowerBlue")))
+(define jingle-bells-false (place-image (text "Jingle Bells" 12 "black") 65 15 (rectangle 130 30 "solid" "gray")))
+(define jingle-bells-true (place-image (text "Jingle Bells" 12 "white") 65 15 (rectangle 130 30 "solid" "ForestGreen")))
+(define misirlou-false (place-image (text "Misirlou" 12 "black") 65 15 (rectangle 130 30 "solid" "gray")))
+(define misirlou-true (place-image (text "Misirlou" 12 "white") 65 15 (rectangle 130 30 "solid" "DarkOrange")))
+(define ghostbusters-false (place-image (text "Ghostbusters" 12 "black") 65 15 (rectangle 130 30 "solid" "gray")))
+(define ghostbusters-true (place-image (text "Ghostbusters" 12 "white") 65 15 (rectangle 130 30 "solid" "olive")))
+
+;;The background for the help screen
+(define help-background (rectangle map-width map-height "solid" "white"))
+;; the help button
+(define help-button (place-image (bold (text "?" 12 "black")) 15 15 (rectangle 30 30 "solid" "gray")))
 
 ;;The text that shows on startup in reverse order of this list
-(define intro-text (list "Press H to toggle this help menu"
-                         "Press R to reset the program"
-                         "Press M to Mute"
-                         "The volume slider and mute button are in the top right"
-                         "Some preset Markov Maps are available by pressing A, S, D or F"
-                         "You can press '.' to add a new random node"
-                         "The selected connection will be red, the connection going the other way will be purple"
-                         "Use the arrow keys to change the node's connection strength"
-                         "Click any node to select it"
-                         "You'll be brought to the program!!!"
-                         "If you click anywhere..."
+(define intro-text (list "Click the ? in the bottom right or press H to toggle this help menu."
+                         "Click the reset button or press R to reset the program to its original launch state."
+                         "Click the mute button in the top right or press M to Mute"
+                         "The volume slider is in the top right."
+                         "Some preset songs are available by clicking the buttons on the right or pressing A, S, D or F."
+                         "You can press . to add a new random node."
+                         "The selected connection will be red, the connection going the other way will be purple."
+                         "Use the ↑ and ↓ keys to scroll and the ← and → to change the node's connection strength."
+                         "Click any node to select it."
+                         "CONTROLS:"
+                         " "
+                         " "
+                         "and load pre-programmed probabilities to hear how the audio changes."
+                         "then generates audio based on those probabilities. You can also change those probabilities, add more notes,"
+                         "Our program analyzes known music to find the probabilities of one musical note occurring after another,"
+                         "If you click anywhere... You'll be brought to the program!!!"
                          "WELCOME TO THE WORLD OF TOMORROW!!!"))
 
 ;;The widest the connection line can be
 (define max-line-width 10)
-
 ;;The color of the connection lines
 (define connection-line-color "blue")
-
 ;;The color of the selected connection
 (define selected-connection-line-color "red")
-
 ;;The color of the selected connection that goes the other way
 (define inverse-selected-connection-line-color "purple")
 
@@ -262,7 +280,20 @@
                     (make-markov-chain (list (make-markov-node 50 '(0.5 0.5)) (make-markov-node 50 '(0.7 0.3))) 0 (make-gui-state 0 3 2 0 0.0 #t)))
 (check-expect (mute (make-markov-chain (list (make-markov-node 50 '(0.5 0.5)) (make-markov-node 50 '(0.7 0.3))) 0 (make-gui-state 0 3 2 0 0.0 #t)))
                     (make-markov-chain (list (make-markov-node 50 '(0.5 0.5)) (make-markov-node 50 '(0.7 0.3))) 0 (make-gui-state 0 3 2 0 0.5 #t)))
-  
+
+;; reset the markov-chain to its initial state upon program launch
+;; markov-chain -> markov-chain
+(define (reset ws)
+  (update-gui initial-chain (update-gui-in-help starting-gui-state #f)))
+;; --------------------------- ADD CHECK-EXPECTS ------------------------
+
+
+;; show the help menu
+;; markov-chain -> markov-chain
+(define (show-help ws)
+  (update-gui ws (update-gui-in-help (markov-chain-gui ws) (not (gui-state-in-help (markov-chain-gui ws))))))
+
+
 ;;END OF UTILITY FUNCTIONS
 
 
@@ -374,6 +405,31 @@
                                ))
                      (markov-chain-current-node chain) (markov-chain-gui chain)))
 
+;; checks if two markov-chains are exactly equal
+;; markov-chain markov-chain -> boolean
+(define (markov-chain-exact=? ws wt)
+  (equal? ws wt))
+(check-expect (markov-chain-exact=? (make-markov-chain (list (make-markov-node 50 '(0.7 0.3)) (make-markov-node 30 '(0.3 0.7))) 0 starting-gui-state)
+                                    (make-markov-chain (list (make-markov-node 50 '(0.7 0.3)) (make-markov-node 30 '(0.3 0.7))) 0 starting-gui-state))
+              #t)
+(check-expect (markov-chain-exact=? (make-markov-chain (list (make-markov-node 50 '(0.7 0.3)) (make-markov-node 50 '(0.7 0.3)) (make-markov-node 30 '(0.3 0.7))) 0 starting-gui-state)
+                                    (make-markov-chain (list (make-markov-node 50 '(0.7 0.3)) (make-markov-node 30 '(0.3 0.7))) 0 starting-gui-state))
+              #f)
+
+;; checks if two markov-chains are equal
+;; only compares markov-nodes of markov-chain, ignores current-node and gui-state
+;; markov-chain markov-chain -> boolean
+(define (markov-chain=? ws wt)
+  (equal? (markov-chain-nodes ws) (markov-chain-nodes wt)))
+(check-expect (markov-chain=? (make-markov-chain (list (make-markov-node 50 '(0.7 0.3)) (make-markov-node 30 '(0.3 0.7))) 0 starting-gui-state)
+                              (make-markov-chain (list (make-markov-node 50 '(0.7 0.3)) (make-markov-node 30 '(0.3 0.7))) 0 starting-gui-state))
+              #t)
+(check-expect (markov-chain=? (make-markov-chain (list (make-markov-node 50 '(0.7 0.3)) (make-markov-node 30 '(0.3 0.7))) 0 (make-gui-state 0 0 2 0 0.5 #t))
+                              (make-markov-chain (list (make-markov-node 50 '(0.7 0.3)) (make-markov-node 30 '(0.3 0.7))) 3 (make-gui-state 2 4 2 0 0.5 #t)))
+              #t)
+(check-expect (markov-chain=? (make-markov-chain (list (make-markov-node 50 '(0.7 0.3)) (make-markov-node 50 '(0.7 0.3)) (make-markov-node 30 '(0.3 0.7))) 0 starting-gui-state)
+                              (make-markov-chain (list (make-markov-node 50 '(0.7 0.3)) (make-markov-node 30 '(0.3 0.7))) 0 starting-gui-state))
+              #f)
 
 ;;END OF MARKOV CHAIN FUNCTIONS
 
@@ -394,16 +450,28 @@
           (text "Volume: " 18 "black")
           (draw-vol-slider ws)
           (draw-mute-button ws)
+          reset-button
+          (draw-frosty-button ws)
+          (draw-jingle-bells-button ws)
+          (draw-misirlou-button ws)
+          (draw-ghostbusters-button ws)
+          help-button
           (draw-circles ws 0)
           (loop-through-lines ws 0)
           )
     (list
-          (make-posn 150 300)
-          (make-posn 965 20)
-          (make-posn 1100 20)
-          (make-posn 1030 60)
-          (make-posn map-center-x map-center-y)
-          (make-posn map-center-x map-center-y)
+          (make-posn 150 300)   ;; draw-connections
+          (make-posn 965 20)    ;; volume text
+          (make-posn 1100 20)   ;; vol-slider
+          (make-posn 1030 60)   ;; mute-button
+          (make-posn 1090 60)   ;; reset-button
+          (make-posn 1070 100)  ;; frosty-button
+          (make-posn 1070 140)  ;; jingle-bells-button
+          (make-posn 1070 180)  ;; misirlou-button
+          (make-posn 1070 220)  ;; ghostbusters-button
+          (make-posn (- map-width 25) (- map-height 25)) ;; help button
+          (make-posn map-center-x map-center-y)  ;; draw-circles
+          (make-posn map-center-x map-center-y)  ;; loop-through-lines
           )
     markov-map)]))
 
@@ -430,7 +498,7 @@
   (place-images
    (l->lot intro-text)
    (get-posns (length intro-text))
-   gray-background))
+   help-background))
 
 ;; Draws the connections of one particular node to itself and all the other nodes
 ;; Should always be called with index as 0 (loops through the list-of-markov-nodes starting at index: 0)
@@ -590,6 +658,65 @@
 (check-expect (draw-mute-button (make-markov-chain (list (make-markov-node 50 '(0.5 0.5)) (make-markov-node 50 '(0.7 0.3))) 0 (make-gui-state 0 0 2 0 0.0 #t)))
               mute-red)
 
+;; draw the song buttons
+;; chain: a markov-chain
+;; song: the song to compare to
+;; true-button: the button to display if song is currently playing
+;; false-button: the button to display if song is not currently playing
+;; markov-chain markov-chain image image -> image
+(define (draw-song-button chain song true-button false-button)
+  (cond
+    [(markov-chain=? chain song) true-button]
+    [else false-button]))
+(check-expect (draw-song-button frosty frosty frosty-true frosty-false)
+              frosty-true)
+(check-expect (draw-song-button frosty misirlou frosty-true frosty-false)
+              frosty-false)
+
+;; draw the frosty-button
+;; if frosty is the song playing: show the frosty-true (blue) button
+;; otherwise: show the frosty-false (gray) button
+;; markov-chain -> image
+(define (draw-frosty-button ws)
+  (draw-song-button ws frosty frosty-true frosty-false))
+(check-expect (draw-frosty-button frosty)
+              frosty-true)
+(check-expect (draw-frosty-button misirlou)
+              frosty-false)
+
+;; draw the jingle-bells-button
+;; if jingle-bells is the song playing: show the jingle-bells-true (green) button
+;; otherwise: show the jingle-bells-false (gray) button
+;; markov-chain -> image
+(define (draw-jingle-bells-button ws)
+  (draw-song-button ws jingle-bells jingle-bells-true jingle-bells-false))
+(check-expect (draw-jingle-bells-button jingle-bells)
+              jingle-bells-true)
+(check-expect (draw-jingle-bells-button misirlou)
+              jingle-bells-false)
+
+;; draw the misirlou-button
+;; if misirlou is the song playing: show the misirlou-true (orange) button
+;; otherwise: show the misirlou-false (gray) button
+;; markov-chain -> image
+(define (draw-misirlou-button ws)
+  (draw-song-button ws misirlou misirlou-true misirlou-false))
+(check-expect (draw-misirlou-button misirlou)
+              misirlou-true)
+(check-expect (draw-misirlou-button frosty)
+              misirlou-false)
+
+;; draw the ghostbusters-button
+;; if ghostbusters is the song playing: show the ghostbusters-true (olive) button
+;; otherwise: show the ghostbusters-false (gray) button
+;; markov-chain -> image
+(define (draw-ghostbusters-button ws)
+  (draw-song-button ws ghostbusters ghostbusters-true ghostbusters-false))
+(check-expect (draw-ghostbusters-button ghostbusters)
+              ghostbusters-true)
+(check-expect (draw-ghostbusters-button misirlou)
+              ghostbusters-false)
+
 ;;END OF DRAW LOGIC
 
 
@@ -645,9 +772,9 @@
                                         (update-gui-connection (markov-chain-gui ws) (max 0 (- (gui-state-connection-selected (markov-chain-gui ws)) 1))))]
     [(key=? ke "down") (make-markov-chain (markov-chain-nodes ws) (markov-chain-current-node ws)
                                         (update-gui-connection (markov-chain-gui ws) (min (sub1 (length (markov-chain-nodes ws))) (+ (gui-state-connection-selected (markov-chain-gui ws)) 1))))]
-    [(key=? ke "h") (update-gui ws (update-gui-in-help (markov-chain-gui ws) (not (gui-state-in-help (markov-chain-gui ws)))))]
+    [(key=? ke "h") (show-help ws)]
     [(key=? ke "m") (mute ws)]
-    [(key=? ke "r") (update-gui initial-chain (update-gui-in-help starting-gui-state #f))]
+    [(key=? ke "r") (reset ws)]
     [(key=? ke "a") frosty]
     [(key=? ke "s") jingle-bells]
     [(key=? ke "d") misirlou]
@@ -686,6 +813,8 @@
 ;; when the mouse clicks:
 ;; - if it is within the bounds of the volume slider: updates the volume
 ;; - if it is within the bounds of one of the nodes: updates the current node selected
+;; - if it is within the bounds of one of the songs: plays the song selected
+;; - if it is within the bounds of the help button: show the help menu
 ;; - otherwise: does nothing
 ;; when the mouse drags:
 ;; - if it is within the bounds of the volume slider: updates the volume
@@ -699,6 +828,12 @@
                                     (cond
                                       [(and (and (>= x 1005) (<= x 1195)) (and (>= y 5) (<= y 35))) (update-gui ws (update-gui-volume (markov-chain-gui ws) (/ (- x 1005) vol-bg-width)))]
                                       [(and (and (>= x 1005) (<= x 1055)) (and (>= y 45) (<= y 75))) (mute ws)]
+                                      [(and (and (>= x 1065) (<= x 1115)) (and (>= y 45) (<= y 75))) (reset ws)]
+                                      [(and (and (>= x 1005) (<= x 1135)) (and (>= y 85) (<= y 115))) frosty]
+                                      [(and (and (>= x 1005) (<= x 1135)) (and (>= y 125) (<= y 155))) jingle-bells]
+                                      [(and (and (>= x 1005) (<= x 1135)) (and (>= y 165) (<= y 195))) misirlou]
+                                      [(and (and (>= x 1005) (<= x 1135)) (and (>= y 205) (<= y 235))) ghostbusters]
+                                      [(and (and (>= x 1160) (<= x 1190)) (and (>= y 550) (<= y 590))) (show-help ws)]
                                       [(< (get-distance x y (calc-circle-x ws (find-closest x y 0 ws 0)) (calc-circle-y ws (find-closest x y 0 ws 0))) circle-radius)
                                        (update-gui ws (update-gui-node (markov-chain-gui ws) (find-closest x y 0 ws 0)))]
                                       [else ws])])]
