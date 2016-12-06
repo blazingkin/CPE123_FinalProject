@@ -285,14 +285,15 @@
 ;; markov-chain -> markov-chain
 (define (reset ws)
   (update-gui initial-chain (update-gui-in-help starting-gui-state #f)))
-;; --------------------------- ADD CHECK-EXPECTS ------------------------
-
+(check-expect (reset frosty) (update-gui initial-chain (update-gui-in-help starting-gui-state #f)))
+(check-expect (reset (make-markov-chain (list (make-markov-node 60 '(1))) 0 starting-gui-state)) (update-gui initial-chain (update-gui-in-help starting-gui-state #f)))
 
 ;; show the help menu
 ;; markov-chain -> markov-chain
 (define (show-help ws)
   (update-gui ws (update-gui-in-help (markov-chain-gui ws) (not (gui-state-in-help (markov-chain-gui ws))))))
-
+(check-expect (show-help initial-chain) (update-gui initial-chain (update-gui-in-help (markov-chain-gui initial-chain) #f)))
+(check-expect (show-help frosty) (update-gui frosty (update-gui-in-help (markov-chain-gui frosty) #t)))
 
 ;;END OF UTILITY FUNCTIONS
 
@@ -494,6 +495,8 @@
 (check-expect (get-posns 0) '())
 (check-expect (get-posns 1) (cons (make-posn (/ map-width 2) 30) '()))
 
+;; Draws Help menu
+;; Markov-chain -> Image
 (define (draw-help chain)
   (place-images
    (l->lot intro-text)
@@ -596,9 +599,10 @@
 
 ;; Generates the name of a node
 ;; Markov-Node -> String
-;; ----------------------- ADD CHECK-EXPECTS ---------------------
 (define (get-node-name node)
   (string-append (list-ref midi-names (modulo (markov-node-midi node) 12)) (number->string (floor (/ (markov-node-midi node) 12)))))
+(check-expect (get-node-name (make-markov-node 60 '(1))) "C5")
+(check-expect (get-node-name (make-markov-node 75 '(1))) "D#6")
 
 ;; Generates the text to be placed in a circle (indicates note name and octave)
 ;; Markov-Node -> Image
