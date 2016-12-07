@@ -9,19 +9,6 @@
 
 ;; The world state for big-bang is a markov-chain
 
-(define-struct gui-state [node-selected connection-selected tick-rate tick-count volume in-help])
-;;A gui-state is a structure:
-;; (make-gui-state Number Number Number Number Number Boolean)
-;; interpretation: A Gui state has:
-;; - node-selected: an integer corresponding to the index of the selected node
-;; - connection-selected: the index of the currently selected connection
-;; - tick-rate: the length of the current note in ticks
-;; - tick-count: the current "tick-index" of the note being played
-;;               the tick-count starts at 0 and increments every time the clock ticks
-;;               when tick-count = tick-rate, the current note has finished playing, and tick-count resets to 0
-;; - volume: a number between 0.0 and 1.0 that reflects the volume of the audio
-;; - in-help: a boolean that represents whether the help menu should be shown or not
-
 (define-struct markov-node [midi connections])
 ;; A markov-node is a structure:
 ;;  (make-markov-node Number list-of-numbers)
@@ -29,9 +16,9 @@
 ;; - midi: a integer value that corresponds to a MIDI note number
 ;; - connections: a list of connection strengths, where the strengths are numbers between 0.0 and 1.0
 
-(define-struct markov-chain [nodes current-node gui])
+(define-struct markov-chain [nodes current-node])
 ;; A markov-chain is a structure:
-;;  (make-markov-chain list-of-markov-nodes Number gui-state)
+;;  (make-markov-chain list-of-markov-nodes Number)
 ;; interpretation: A markov-chain has
 ;; - nodes: a list of markov-nodes in the markov-chain
 ;; - current-node: a integer value corresponding to the current index of the markov-chain list
