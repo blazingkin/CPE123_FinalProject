@@ -562,14 +562,15 @@
               [else connection-line-color]) (floor (* max-line-width (list-ref (markov-node-connections (list-ref (markov-chain-nodes chain) node-on)) index))) "solid" "round" "bevel"))
 (check-expect (get-pen initial-chain 0 0) (make-pen selected-connection-line-color 0 "solid" "round" "bevel"))
 
-;;This function loops through all of the connections and draws the lines
+;;This function loops through all of the nodes to draw the connections
+;; Markov-chain, 0 -> Image
 (define (loop-through-lines chain index)
   (cond
     [(= (length (markov-chain-nodes chain)) index) markov-map]
     [else (add-lines chain index 0 (loop-through-lines chain (add1 index)))]))
-;;Returns an image... check-expect possible?
 
 ;;Draws all the lines for one node's connections
+;; Markov-Chain, Number, Number, Image -> Image
 (define (add-lines chain node-on index image)
   (cond
     [(= index (length (markov-chain-nodes chain))) image]
@@ -580,7 +581,6 @@
                                                               image))]
     [else (add-lines chain node-on (add1 index) (add-line image (calc-circle-x chain node-on) (calc-circle-y chain node-on) (calc-circle-x chain index) (calc-circle-y chain index) (get-pen chain node-on index)))])
   )
-;;Returns an image... check-expect possible?
 
 ;; Draws circles for all markov-nodes in list-of-markov-nodes of markov-chain in a circular pattern
 ;; Should always be called with index as 0 (loops through the list-of-markov-nodes starting at index: 0)
@@ -884,19 +884,20 @@
 ) 0 (update-gui-in-help starting-gui-state #f)))
 
 
+;;The jingle bells initial markov-chain
 (define jingle-bells
   (make-markov-chain (list
-(make-markov-node 28 (list 0 1 0 0 0 0 0 0 0 ))
-(make-markov-node 29 (list 25/171 1/38 5/171 25/38 2/171 1/38 13/342 1/171 10/171 ))
-(make-markov-node 30 (list 0 2/149 0 0 80/149 28/149 36/149 3/149 0 ))
-(make-markov-node 44 (list 0 0 1 0 0 0 0 0 0 ))
-(make-markov-node 60 (list 3/152 4/57 0 0 5/57 29/114 1/4 13/114 31/152 ))
-(make-markov-node 65 (list 5/254 6/127 0 0 239/508 61/508 49/254 9/254 29/254 ))
-(make-markov-node 69 (list 13/537 7/179 0 0 107/537 235/537 110/537 7/179 10/179 ))
-(make-markov-node 72 (list 8/207 1/23 0 0 35/207 25/207 88/207 8/207 34/207 ))
-(make-markov-node 83 (list 61/204 101/204 0 1/136 11/204 19/408 19/408 7/408 7/204 ))
+(make-markov-node 28 (list 0 1 0 0 0 0 0 0 ))
+(make-markov-node 29 (list 25/171 1/38 5/171 25/38 2/171 1/38 13/342 11/171 ))
+(make-markov-node 30 (list 0 2/149 0 0 80/149 28/149 36/149 3/149 ))
+(make-markov-node 44 (list 0 0 1 0 0 0 0 0 ))
+(make-markov-node 60 (list 34/152 4/57 0 0 5/57 29/114 1/4 13/114 ))
+(make-markov-node 65 (list 5/254 6/127 0 0 239/508 61/508 49/254 38/254 ))
+(make-markov-node 69 (list 13/537 17/179 0 0 107/537 235/537 110/537 7/179 ))
+(make-markov-node 72 (list 8/207 1/23 0 0 35/207 25/207 88/207 42/207 ))
 ) 0 (update-gui-in-help starting-gui-state #f)))
 
+;;The misirlou initial markov-chain
 (define misirlou
   (make-markov-chain (list
 (make-markov-node 38 (list 11/207 17/207 25/207 29/207 8/69 5/69 20/207 10/69 11/207 25/207 ))
@@ -911,6 +912,7 @@
 (make-markov-node 71 (list 0 2/121 79/363 1/363 14/363 1/33 13/363 19/363 2/121 214/363 ))
 ) 0 (update-gui-in-help starting-gui-state #f)))
 
+;;The ghostbusters initial markov-chain
 (define ghostbusters
   (make-markov-chain (list
 (make-markov-node 35 (list 0 41/151 0 0 101/151 0 9/151 0 0 0 0 ))
