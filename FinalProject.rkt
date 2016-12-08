@@ -32,7 +32,7 @@
 
 (define-struct gui-state [node-selected connection-selected tick-rate tick-count volume in-help paused])
 ;;A gui-state is a structure:
-;; (make-gui-state Number Number Number Number Number)
+;; (make-gui-state Number Number Number Number Number Boolean)
 ;; interpretation: A Gui state has:
 ;; - node-selected: an integer corresponding to the index of the selected node
 ;; - connection-selected: the index of the currently selected connection
@@ -41,6 +41,7 @@
 ;;               the tick-count starts at 0 and increments every time the clock ticks
 ;;               when tick-count = tick-rate, the current note has finished playing, and tick-count resets to 0
 ;; - volume: a number between 0.0 and 1.0 that reflects the volume of the audio
+;; - in-help: a boolean that represents whether the help menu should be shown or not
 
 (define-struct markov-node [midi connections])
 ;; A markov-node is a structure:
@@ -578,6 +579,7 @@
 
 ;;Get a pen so that our node connection is drawn with the correct thickness
 ;;This multiplies a max line width by the weight of the node to get the thickness
+;; Markov-chain Number Number -> Pen Object 
 (define (get-pen chain node-on index)
   (make-pen (cond
               [(and (= node-on (gui-state-node-selected (markov-chain-gui chain))) (= index (gui-state-connection-selected (markov-chain-gui chain)))) selected-connection-line-color]
