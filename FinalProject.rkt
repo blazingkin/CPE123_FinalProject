@@ -135,6 +135,13 @@
 (define misirlou-true (place-image (text "Misirlou" 12 "white") 65 15 (rectangle 130 30 "solid" "DarkOrange")))
 (define ghostbusters-false (place-image (text "Ghostbusters" 12 "black") 65 15 (rectangle 130 30 "solid" "gray")))
 (define ghostbusters-true (place-image (text "Ghostbusters" 12 "white") 65 15 (rectangle 130 30 "solid" "olive")))
+(define ode-false (place-image (text "Ode to Joy" 12 "black") 65 15 (rectangle 130 30 "solid" "gray")))
+(define ode-true (place-image (text "Ode to Joy" 12 "white") 65 15 (rectangle 130 30 "solid" "violet")))
+(define adele-false (place-image (text "Someone Like You" 12 "black") 65 15 (rectangle 130 30 "solid" "gray")))
+(define adele-true (place-image (text "Someone Like You" 12 "white") 65 15 (rectangle 130 30 "solid" "aquamarine")))
+(define hbday-false (place-image (text "Happy Birthday" 12 "black") 65 15 (rectangle 130 30 "solid" "gray")))
+(define hbday-true (place-image (text "Happy Birthday" 12 "white") 65 15 (rectangle 130 30 "solid" "pink")))
+
 
 ;;The Paused Indicator
 (define paused (place-image
@@ -471,6 +478,9 @@
           (draw-jingle-bells-button ws)
           (draw-misirlou-button ws)
           (draw-ghostbusters-button ws)
+          (draw-ode-button ws)
+          (draw-adele-button ws)
+          (draw-hbday-button ws)
           help-button
           (draw-paused ws)
           (draw-circles ws 0)
@@ -486,6 +496,9 @@
           (make-posn 1070 140)  ;; jingle-bells-button
           (make-posn 1070 180)  ;; misirlou-button
           (make-posn 1070 220)  ;; ghostbusters-button
+          (make-posn 1070 260)  ;; ode-button
+          (make-posn 1070 300)  ;; adele-button
+          (make-posn 1070 340)  ;; hbday-button
           (make-posn (- map-width 25) (- map-height 25)) ;; help button
           (make-posn map-center-x map-center-y) ;; Paused indicator
           (make-posn map-center-x map-center-y)  ;; draw-circles
@@ -753,6 +766,39 @@
 (check-expect (draw-ghostbusters-button misirlou)
               ghostbusters-false)
 
+;; draw the ode-button
+;; if ode is the song playing: show the ode-true (violet) button
+;; otherwise: show the ode-false (gray) button
+;; markov-chain -> image
+(define (draw-ode-button ws)
+  (draw-song-button ws ode ode-true ode-false))
+(check-expect (draw-ode-button ode)
+              ode-true)
+(check-expect (draw-ode-button misirlou)
+              ode-false)
+
+;; draw the adele-button
+;; if adele is the song playing: show the adele-true (aquamarine) button
+;; otherwise: show the adele-false (gray) button
+;; markov-chain -> image
+(define (draw-adele-button ws)
+  (draw-song-button ws adele adele-true adele-false))
+(check-expect (draw-adele-button adele)
+              adele-true)
+(check-expect (draw-adele-button misirlou)
+              adele-false)
+
+;; draw the hbday-button
+;; if hbday is the song playing: show the hbday-true (pink) button
+;; otherwise: show the hbday-false (gray) button
+;; markov-chain -> image
+(define (draw-hbday-button ws)
+  (draw-song-button ws hbday hbday-true hbday-false))
+(check-expect (draw-hbday-button hbday)
+              hbday-true)
+(check-expect (draw-hbday-button misirlou)
+              hbday-false)
+
 ;;END OF DRAW LOGIC
 
 
@@ -816,6 +862,9 @@
     [(key=? ke "s") jingle-bells]
     [(key=? ke "d") misirlou]
     [(key=? ke "f") ghostbusters]
+    [(key=? ke "g") ode]
+    [(key=? ke "h") adele]
+    [(key=? ke "j") hbday]
     [else ws])
   )
 
@@ -870,6 +919,9 @@
                                       [(and (and (>= x 1005) (<= x 1135)) (and (>= y 125) (<= y 155))) jingle-bells]
                                       [(and (and (>= x 1005) (<= x 1135)) (and (>= y 165) (<= y 195))) misirlou]
                                       [(and (and (>= x 1005) (<= x 1135)) (and (>= y 205) (<= y 235))) ghostbusters]
+                                      [(and (and (>= x 1005) (<= x 1135)) (and (>= y 205) (<= y 275))) ode]
+                                      [(and (and (>= x 1005) (<= x 1135)) (and (>= y 205) (<= y 315))) adele]
+                                      [(and (and (>= x 1005) (<= x 1135)) (and (>= y 205) (<= y 355))) hbday]
                                       [(and (and (>= x 1160) (<= x 1190)) (and (>= y 550) (<= y 590))) (show-help ws)]
                                       [(< (get-distance x y (calc-circle-x ws (find-closest x y 0 ws 0)) (calc-circle-y ws (find-closest x y 0 ws 0))) circle-radius)
                                        (update-gui ws (update-gui-node (markov-chain-gui ws) (find-closest x y 0 ws 0)))]
@@ -900,7 +952,7 @@
 ) 0 starting-gui-state)
 )
 
-
+;;The frost initial markov-chain
 (define frosty
   (make-markov-chain (list
 (make-markov-node 35 (list 0 0 11/201 26/201 10/67 9/67 16/201 14/67 26/201 11/201 4/67 ))
@@ -961,6 +1013,45 @@
 (make-markov-node 74 (list 5/37 0 7/111 4/111 0 2/37 7/111 0 0 29/111 43/111 ))
 ) 0 (update-gui-in-help starting-gui-state #f)))
 
+;;The odetojoy initial markov-chain
+(define ode
+  (make-markov-chain (list
+(make-markov-node 48 (list 0 1/2 1/3 1/6 0 0 0 0 ))
+(make-markov-node 52 (list 0 0 3/5 2/5 0 0 0 0 ))
+(make-markov-node 55 (list 0 0 0 1/3 5/18 5/18 1/9 0 ))
+(make-markov-node 60 (list 4/15 1/15 1/15 0 1/3 4/15 0 0 ))
+(make-markov-node 62 (list 0 1/15 7/15 4/15 0 1/5 0 0 ))
+(make-markov-node 64 (list 1/8 0 1/4 1/8 1/8 1/16 5/16 0 ))
+(make-markov-node 65 (list 0 0 0 0 0 5/7 0 2/7 ))
+(make-markov-node 67 (list 0 0 2/5 0 0 0 0 3/5 ))
+) 0 (update-gui-in-help starting-gui-state #f)))
+
+;;The adele initial markov-chain
+(define adele
+  (make-markov-chain (list
+(make-markov-node 54 (list 0 1/5 9/25 0 21/50 0 0 1/50 0 ))
+(make-markov-node 56 (list 13/68 0 1/68 5/17 21/68 0 13/68 0 0 ))
+(make-markov-node 57 (list 1/6 1/156 1/156 0 19/52 9/26 3/52 2/39 0 ))
+(make-markov-node 59 (list 1/48 5/12 1/3 0 0 1/48 1/6 0 1/24 ))
+(make-markov-node 61 (list 29/307 43/307 79/307 0 0 0 58/307 62/307 36/307 ))
+(make-markov-node 62 (list 1/76 1/152 37/76 1/76 0 1/152 0 63/152 9/152 ))
+(make-markov-node 64 (list 0 6/47 5/47 5/47 31/47 0 0 0 0 ))
+(make-markov-node 66 (list 2/147 0 8/147 0 64/147 65/147 1/147 0 1/21 ))
+(make-markov-node 69 (list 0 0 1/54 0 5/9 1/6 2/27 5/27 0 ))
+) 0 (update-gui-in-help starting-gui-state #f)))
+
+;;The Happy Birthday initial markov-chain
+(define hbday
+  (make-markov-chain (list
+(make-markov-node 60 (list 3/8 1/4 0 1/8 1/8 0 0 1/8 ))
+(make-markov-node 62 (list 2/3 0 0 0 0 0 1/3 0 ))
+(make-markov-node 64 (list 1/2 1/2 0 0 0 0 0 0 ))
+(make-markov-node 65 (list 1/4 0 1/2 0 1/4 0 0 0 ))
+(make-markov-node 67 (list 0 0 0 1 0 0 0 0 ))
+(make-markov-node 69 (list 0 0 0 1 0 0 0 0 ))
+(make-markov-node 70 (list 0 0 0 0 0 1/2 1/2 0 ))
+(make-markov-node 72 (list 0 0 0 0 0 1 0 0 ))
+) 0 (update-gui-in-help starting-gui-state #f)))
 ;;END OF CHAIN DEFINITIONS
 
 
