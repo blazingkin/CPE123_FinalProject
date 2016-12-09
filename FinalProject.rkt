@@ -863,8 +863,8 @@
     [(key=? ke "d") misirlou]
     [(key=? ke "f") ghostbusters]
     [(key=? ke "g") ode]
-    [(key=? ke "h") adele]
-    [(key=? ke "j") hbday]
+    [(key=? ke "j") adele]
+    [(key=? ke "k") hbday]
     [else ws])
   )
 
