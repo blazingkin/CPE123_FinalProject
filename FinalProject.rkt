@@ -30,9 +30,9 @@
 ;; World Definitions
 
 
-(define-struct gui-state [node-selected connection-selected tick-rate tick-count volume in-help paused])
+(define-struct gui-state [node-selected connection-selected tick-rate tick-count volume in-help paused beat-count])
 ;;A gui-state is a structure:
-;; (make-gui-state Number Number Number Number Number Boolean)
+;; (make-gui-state Number Number Number Number Number Boolean Boolean Number)
 ;; interpretation: A Gui state has:
 ;; - node-selected: an integer corresponding to the index of the selected node
 ;; - connection-selected: the index of the currently selected connection
@@ -42,6 +42,8 @@
 ;;               when tick-count = tick-rate, the current note has finished playing, and tick-count resets to 0
 ;; - volume: a number between 0.0 and 1.0 that reflects the volume of the audio
 ;; - in-help: a boolean that represents whether the help menu should be shown or not
+;; - paused: a boolean that represents if the program is paused or not
+;; - beat-count: a number that represents when the background track should be queued
 
 (define-struct markov-node [midi connections])
 ;; A markov-node is a structure:
@@ -76,7 +78,7 @@
 (define map-height 600)
 
 ;;The gui-state that the program starts in and will be used for some check-expect type things
-(define starting-gui-state (make-gui-state 0 0 2 0 0.5 #t #f))
+(define starting-gui-state (make-gui-state 0 0 2 0 0.5 #t #f 0))
 
 
 ;; the maximum possible length of a note (in ticks) note-length
@@ -243,52 +245,58 @@
 ;;Update GUI selection
 ;; gui-state number -> gui-state
 (define (update-gui-node gui newnode)
-  (make-gui-state newnode (gui-state-connection-selected gui) (gui-state-tick-rate gui) (gui-state-tick-count gui) (gui-state-volume gui) (gui-state-in-help gui) (gui-state-paused gui)))
-(check-expect (update-gui-node (make-gui-state 0 0 2 0 0.5 #t #t) 2) (make-gui-state 2 0 2 0 0.5 #t #t))
+  (make-gui-state newnode (gui-state-connection-selected gui) (gui-state-tick-rate gui) (gui-state-tick-count gui) (gui-state-volume gui) (gui-state-in-help gui) (gui-state-paused gui) (gui-state-beat-count gui)))
+(check-expect (update-gui-node (make-gui-state 0 0 2 0 0.5 #t #t 0) 2) (make-gui-state 2 0 2 0 0.5 #t #t 0))
 
 ;;Update GUI connection
 ;; gui-state number -> gui-state
 (define (update-gui-connection gui newcon)
-  (make-gui-state (gui-state-node-selected gui) newcon (gui-state-tick-rate gui) (gui-state-tick-count gui) (gui-state-volume gui) (gui-state-in-help gui) (gui-state-paused gui)))
-(check-expect (update-gui-connection (make-gui-state 0 0 2 0 0.5 #t #f) 3) (make-gui-state 0 3 2 0 0.5 #t #f))
+  (make-gui-state (gui-state-node-selected gui) newcon (gui-state-tick-rate gui) (gui-state-tick-count gui) (gui-state-volume gui) (gui-state-in-help gui) (gui-state-paused gui) (gui-state-beat-count gui)))
+(check-expect (update-gui-connection (make-gui-state 0 0 2 0 0.5 #t #f 0) 3) (make-gui-state 0 3 2 0 0.5 #t #f 0))
 
 ;;Update GUI Tick Rate
 ;; gui-state number -> gui-state
 (define (update-gui-rate gui tickrate)
-  (make-gui-state (gui-state-node-selected gui) (gui-state-connection-selected gui) tickrate (gui-state-tick-count gui) (gui-state-volume gui) (gui-state-in-help gui) (gui-state-paused gui)))
-(check-expect (update-gui-rate (make-gui-state 0 0 2 0 0.5 #t #f) 4) (make-gui-state 0 0 4 0 0.5 #t #f))
+  (make-gui-state (gui-state-node-selected gui) (gui-state-connection-selected gui) tickrate (gui-state-tick-count gui) (gui-state-volume gui) (gui-state-in-help gui) (gui-state-paused gui) (gui-state-beat-count gui)))
+(check-expect (update-gui-rate (make-gui-state 0 0 2 0 0.5 #t #f 0) 4) (make-gui-state 0 0 4 0 0.5 #t #f 0))
 
 ;;Update GUI Tick Count
 ;; gui-state number -> gui-state
 (define (update-gui-tickcount gui tickcount)
-  (make-gui-state (gui-state-node-selected gui) (gui-state-connection-selected gui) (gui-state-tick-rate gui) tickcount (gui-state-volume gui) (gui-state-in-help gui) (gui-state-paused gui)))
-(check-expect (update-gui-tickcount (make-gui-state 0 0 2 0 0.5 #t #f) 1) (make-gui-state 0 0 2 1 0.5 #t #f))
+  (make-gui-state (gui-state-node-selected gui) (gui-state-connection-selected gui) (gui-state-tick-rate gui) tickcount (gui-state-volume gui) (gui-state-in-help gui) (gui-state-paused gui) (gui-state-beat-count gui)))
+(check-expect (update-gui-tickcount (make-gui-state 0 0 2 0 0.5 #t #f 0) 1) (make-gui-state 0 0 2 1 0.5 #t #f 0))
 
 ;;Update GUI Volume
 ;; gui-state number -> gui-state
 (define (update-gui-volume gui volume)
-  (make-gui-state (gui-state-node-selected gui) (gui-state-connection-selected gui) (gui-state-tick-rate gui) (gui-state-tick-count gui) volume (gui-state-in-help gui) (gui-state-paused gui)))
-(check-expect (update-gui-volume (make-gui-state 0 0 2 0 0.5 #t #f) 0.8) (make-gui-state 0 0 2 0 0.8 #t #f))
+  (make-gui-state (gui-state-node-selected gui) (gui-state-connection-selected gui) (gui-state-tick-rate gui) (gui-state-tick-count gui) volume (gui-state-in-help gui) (gui-state-paused gui) (gui-state-beat-count gui)))
+(check-expect (update-gui-volume (make-gui-state 0 0 2 0 0.5 #t #f 0) 0.8) (make-gui-state 0 0 2 0 0.8 #t #f 0))
 
 ;;Update GUI Help Status
 ;; gui-state boolean -> gui-state
 (define (update-gui-in-help gui in-help)
-  (make-gui-state (gui-state-node-selected gui) (gui-state-connection-selected gui) (gui-state-tick-rate gui) (gui-state-tick-count gui) (gui-state-volume gui) in-help (gui-state-paused gui)))
-(check-expect (update-gui-in-help (make-gui-state 0 0 2 0 0.5 #f #f) #t) (make-gui-state 0 0 2 0 0.5 #t #f))
+  (make-gui-state (gui-state-node-selected gui) (gui-state-connection-selected gui) (gui-state-tick-rate gui) (gui-state-tick-count gui) (gui-state-volume gui) in-help (gui-state-paused gui) (gui-state-beat-count gui)))
+(check-expect (update-gui-in-help (make-gui-state 0 0 2 0 0.5 #f #f 0) #t) (make-gui-state 0 0 2 0 0.5 #t #f 0))
 
 ;;Update GUI Paused Status
 ;; gui-state, boolean -> gui-state
 (define (update-gui-paused gui paused)
-    (make-gui-state (gui-state-node-selected gui) (gui-state-connection-selected gui) (gui-state-tick-rate gui) (gui-state-tick-count gui) (gui-state-volume gui) (gui-state-in-help gui) paused))
-(check-expect (update-gui-paused (make-gui-state 0 0 2 0 0.5 #f #f) #t) (make-gui-state 0 0 2 0 0.5 #f #t))
+    (make-gui-state (gui-state-node-selected gui) (gui-state-connection-selected gui) (gui-state-tick-rate gui) (gui-state-tick-count gui) (gui-state-volume gui) (gui-state-in-help gui) paused (gui-state-beat-count gui)))
+(check-expect (update-gui-paused (make-gui-state 0 0 2 0 0.5 #f #f 0) #t) (make-gui-state 0 0 2 0 0.5 #f #t 0))
+
+;;Update GUI Beat Count Status
+;; gui-state, number -> gui-state
+(define (update-gui-beat-count gui beat)
+    (make-gui-state (gui-state-node-selected gui) (gui-state-connection-selected gui) (gui-state-tick-rate gui) (gui-state-tick-count gui) (gui-state-volume gui) (gui-state-in-help gui) (gui-state-paused gui) beat))
+(check-expect (update-gui-beat-count (make-gui-state 0 0 2 0 0.5 #f #f 0) 1) (make-gui-state 0 0 2 0 0.5 #f #f 1))
 
 
 ;;Update GUI
 ;; markov-chain gui-state -> markov-chain
 (define (update-gui chain newgui)
   (make-markov-chain (markov-chain-nodes chain) (markov-chain-current-node chain) newgui))
-(check-expect (update-gui (make-markov-chain (list (make-markov-node 50 '(0.5 0.5)) (make-markov-node 50 '(0.7 0.3))) 0 starting-gui-state) (make-gui-state 0 3 2 0 0.9 #t #f))
-              (make-markov-chain (list (make-markov-node 50 '(0.5 0.5)) (make-markov-node 50 '(0.7 0.3))) 0 (make-gui-state 0 3 2 0 0.9 #t #f)))
+(check-expect (update-gui (make-markov-chain (list (make-markov-node 50 '(0.5 0.5)) (make-markov-node 50 '(0.7 0.3))) 0 starting-gui-state) (make-gui-state 0 3 2 0 0.9 #t #f 0))
+              (make-markov-chain (list (make-markov-node 50 '(0.5 0.5)) (make-markov-node 50 '(0.7 0.3))) 0 (make-gui-state 0 3 2 0 0.9 #t #f 0)))
 
 ;; mute or unmute the volume
 ;; if the volume is already 0.0: change it to 0.5
@@ -298,10 +306,10 @@
   (cond
     [(= (gui-state-volume (markov-chain-gui ws)) 0.0) (update-gui ws (update-gui-volume (markov-chain-gui ws) 0.5))]
     [else (update-gui ws (update-gui-volume (markov-chain-gui ws) 0.0))]))
-(check-expect (mute (make-markov-chain (list (make-markov-node 50 '(0.5 0.5)) (make-markov-node 50 '(0.7 0.3))) 0 (make-gui-state 0 3 2 0 0.9 #t #f)))
-                    (make-markov-chain (list (make-markov-node 50 '(0.5 0.5)) (make-markov-node 50 '(0.7 0.3))) 0 (make-gui-state 0 3 2 0 0.0 #t #f)))
-(check-expect (mute (make-markov-chain (list (make-markov-node 50 '(0.5 0.5)) (make-markov-node 50 '(0.7 0.3))) 0 (make-gui-state 0 3 2 0 0.0 #t #f)))
-                    (make-markov-chain (list (make-markov-node 50 '(0.5 0.5)) (make-markov-node 50 '(0.7 0.3))) 0 (make-gui-state 0 3 2 0 0.5 #t #f)))
+(check-expect (mute (make-markov-chain (list (make-markov-node 50 '(0.5 0.5)) (make-markov-node 50 '(0.7 0.3))) 0 (make-gui-state 0 3 2 0 0.9 #t #f 0)))
+                    (make-markov-chain (list (make-markov-node 50 '(0.5 0.5)) (make-markov-node 50 '(0.7 0.3))) 0 (make-gui-state 0 3 2 0 0.0 #t #f 0)))
+(check-expect (mute (make-markov-chain (list (make-markov-node 50 '(0.5 0.5)) (make-markov-node 50 '(0.7 0.3))) 0 (make-gui-state 0 3 2 0 0.0 #t #f 0)))
+                    (make-markov-chain (list (make-markov-node 50 '(0.5 0.5)) (make-markov-node 50 '(0.7 0.3))) 0 (make-gui-state 0 3 2 0 0.5 #t #f 0)))
 
 ;; reset the markov-chain to its initial state upon program launch
 ;; markov-chain -> markov-chain
@@ -333,7 +341,7 @@
 (check-expect (add-node-to-chain (make-markov-node 60 '(1)) (make-markov-chain '() 0 starting-gui-state))
               (make-markov-chain (list (make-markov-node 60 '(1))) 0 starting-gui-state))
 ;; Given: (add-node-to-chain (make-markov-node 40 '(0.5 0.5)) (make-markov-chain (list (make-markov-node 60 '(1))) 0 starting-gui-state))
-;; Expect: (make-markov-chain (list (make-markov-node 60 (list 1/(1+random) (random)/(1+random))) (make-markov-node 40 (list 0.5 0.5))) 0 (make-gui-state 0 0 2 0 0.5))
+;; Expect: (make-markov-chain (list (make-markov-node 60 (list 1/(1+random) (random)/(1+random))) (make-markov-node 40 (list 0.5 0.5))) 0 (make-gui-state 0 0 2 0 0.5)) --FIX THIS--
 ;; where random represents the random number between 0 and 1 that is being added as a connection
 (define (add-node-to-chain node chain)
   (make-markov-chain (append (alert-all-nodes-add (markov-chain-nodes chain)) (list node)) (markov-chain-current-node chain) (markov-chain-gui chain))
@@ -447,8 +455,8 @@
 (check-expect (markov-chain=? (make-markov-chain (list (make-markov-node 50 '(0.7 0.3)) (make-markov-node 30 '(0.3 0.7))) 0 starting-gui-state)
                               (make-markov-chain (list (make-markov-node 50 '(0.7 0.3)) (make-markov-node 30 '(0.3 0.7))) 0 starting-gui-state))
               #t)
-(check-expect (markov-chain=? (make-markov-chain (list (make-markov-node 50 '(0.7 0.3)) (make-markov-node 30 '(0.3 0.7))) 0 (make-gui-state 0 0 2 0 0.5 #t #f))
-                              (make-markov-chain (list (make-markov-node 50 '(0.7 0.3)) (make-markov-node 30 '(0.3 0.7))) 3 (make-gui-state 2 4 2 0 0.5 #t #f)))
+(check-expect (markov-chain=? (make-markov-chain (list (make-markov-node 50 '(0.7 0.3)) (make-markov-node 30 '(0.3 0.7))) 0 (make-gui-state 0 0 2 0 0.5 #t #f 0))
+                              (make-markov-chain (list (make-markov-node 50 '(0.7 0.3)) (make-markov-node 30 '(0.3 0.7))) 3 (make-gui-state 2 4 2 0 0.5 #t #f 0)))
               #t)
 (check-expect (markov-chain=? (make-markov-chain (list (make-markov-node 50 '(0.7 0.3)) (make-markov-node 50 '(0.7 0.3)) (make-markov-node 30 '(0.3 0.7))) 0 starting-gui-state)
                               (make-markov-chain (list (make-markov-node 50 '(0.7 0.3)) (make-markov-node 30 '(0.3 0.7))) 0 starting-gui-state))
@@ -702,9 +710,9 @@
   (cond
     [(= (gui-state-volume (markov-chain-gui ws)) 0.0) mute-red]
     [else mute-gray]))
-(check-expect (draw-mute-button (make-markov-chain (list (make-markov-node 50 '(0.5 0.5)) (make-markov-node 50 '(0.7 0.3))) 0 (make-gui-state 0 0 2 0 0.5 #t #f)))
+(check-expect (draw-mute-button (make-markov-chain (list (make-markov-node 50 '(0.5 0.5)) (make-markov-node 50 '(0.7 0.3))) 0 (make-gui-state 0 0 2 0 0.5 #t #f 0)))
               mute-gray)
-(check-expect (draw-mute-button (make-markov-chain (list (make-markov-node 50 '(0.5 0.5)) (make-markov-node 50 '(0.7 0.3))) 0 (make-gui-state 0 0 2 0 0.0 #t #f)))
+(check-expect (draw-mute-button (make-markov-chain (list (make-markov-node 50 '(0.5 0.5)) (make-markov-node 50 '(0.7 0.3))) 0 (make-gui-state 0 0 2 0 0.0 #t #f 0)))
               mute-red)
 
 ;; draw the song buttons
@@ -811,22 +819,31 @@
 ;; - Create and return a markov-chain with the same list-of-markov-nodes but a new index
 ;; - Queue the note corresponding to the current node (based on the index)
 ;; Markov-Chain -> Markov-Chain
+(define background
+  (rs-append*
+   (list kick (silence (- (/ FRAME-RATE 4) (rs-frames kick)))
+         c-hi-hat-1 (silence (- (/ FRAME-RATE 4) (rs-frames c-hi-hat-1)))
+         snare 
+         c-hi-hat-1 (silence (- (/ FRAME-RATE 4) (rs-frames c-hi-hat-1))))))
+
 (define (tick-handler ws)
   (cond
   [(gui-state-paused (markov-chain-gui ws)) ws]
-  [(= (gui-state-tick-rate (markov-chain-gui ws)) (gui-state-tick-count (markov-chain-gui ws)))
+  [else
+   (both
+    (cond
+      [(= (modulo (gui-state-beat-count (markov-chain-gui ws)) 4) 0) (pstream-queue p (rs-scale 0.1 background) (pstream-current-frame p))]
+      [else (pstream-queue p (silence 1) (pstream-current-frame p))])
    (invboth 
-   (make-markov-chain (markov-chain-nodes ws) (get-next-node ws) (update-gui-rate (update-gui-tickcount (markov-chain-gui ws) 0) (max 1 (min max-tick (+ (gui-state-tick-rate (markov-chain-gui ws)) (- (random 1 5) 3))))))
+   (make-markov-chain (markov-chain-nodes ws) (get-next-node ws) (update-gui-beat-count (markov-chain-gui ws) (add1 (gui-state-beat-count (markov-chain-gui ws)))))
    (pstream-queue p
                   (rs-scale (gui-state-volume (markov-chain-gui ws))
                             (synth-note "main"
                                         35
                                         (markov-node-midi (list-ref (markov-chain-nodes ws) (markov-chain-current-node ws)))
                                         (* (/ FRAME-RATE 5) (gui-state-tick-rate (markov-chain-gui ws)))))
-                  (pstream-current-frame p)))]
-  [else
-   (update-gui ws (update-gui-tickcount (markov-chain-gui ws) (add1 (gui-state-tick-count (markov-chain-gui ws)))))
-   ]))
+                  (pstream-current-frame p))))]))
+
 
 ;;END TICK HANDLER
 
@@ -1062,6 +1079,6 @@
 ;; The world state of this big-bang is a markov-chain
 (big-bang initial-chain
           [to-draw draw-handler]
-          [on-tick tick-handler 1/10]
+          [on-tick tick-handler 1/4]
           [on-key key-handler]
           [on-mouse click-handler])
