@@ -863,8 +863,10 @@
   [else
    (both
     (cond
-      [(= (modulo (gui-state-beat-count (markov-chain-gui ws)) 4) 0) (pstream-queue p (rs-scale 0.1 background) (pstream-current-frame p))]
+      [(= (modulo (gui-state-beat-count (markov-chain-gui ws)) 8) 0) (pstream-queue p (rs-scale 0.1 background) (pstream-current-frame p))]
       [else (pstream-queue p (silence 1) (pstream-current-frame p))])
+    (cond 
+      [(= (modulo (gui-state-beat-count (markov-chain-gui ws)) (gui-state-tick-rate (markov-chain-gui ws))) 0)
    (invboth 
    (make-markov-chain (markov-chain-nodes ws) (get-next-node ws) (update-gui-beat-count (markov-chain-gui ws) (add1 (gui-state-beat-count (markov-chain-gui ws)))))
    (pstream-queue p
@@ -873,7 +875,10 @@
                                         35
                                         (markov-node-midi (list-ref (markov-chain-nodes ws) (markov-chain-current-node ws)))
                                         (* (/ FRAME-RATE 5) (gui-state-tick-rate (markov-chain-gui ws)))))
-                  (pstream-current-frame p))))]))
+                  (pstream-current-frame p)))]
+      [else (make-markov-chain (markov-chain-nodes ws) (markov-chain-current-node ws) (update-gui-beat-count (markov-chain-gui ws) (add1 (gui-state-beat-count (markov-chain-gui ws)))))])
+
+   )]))
 
 
 ;;END TICK HANDLER
@@ -885,7 +890,23 @@
 
 
 
-
+;; Makes Tempo Faster
+;; Markov-Chain -> Markov-Chain
+(define (faster ws)
+  (update-gui ws
+              (update-gui-rate (markov-chain-gui ws)
+                                   (cond
+                                     [(or (= (gui-state-tick-rate (markov-chain-gui ws)) 2) (= (gui-state-tick-rate (markov-chain-gui ws)) 1)) 1]
+                                     [else (- (gui-state-tick-rate (markov-chain-gui ws)) 2)]))))
+;; Makes Tempo Slower
+(define (slower ws)
+  (update-gui ws
+              (update-gui-rate (markov-chain-gui ws)
+                                   (cond
+                                     [(= (gui-state-tick-rate (markov-chain-gui ws)) 1) 2]
+                                     [(= (gui-state-tick-rate (markov-chain-gui ws)) 8) 8]
+                                     [else (+ (gui-state-tick-rate (markov-chain-gui ws)) 2)]))))
+                                      
 
 ;; Key Handler
 ;; Adds a random markov-node to the list-of-markov-nodes in the markov-chain when "." is pressed
@@ -904,8 +925,8 @@
     [(key=? ke "down") (make-markov-chain (markov-chain-nodes ws) (markov-chain-current-node ws)
                                         (update-gui-connection (markov-chain-gui ws) (min (sub1 (length (markov-chain-nodes ws))) (+ (gui-state-connection-selected (markov-chain-gui ws)) 1))))]
     [(key=? ke " ") (update-gui ws (update-gui-paused (markov-chain-gui ws) (not (gui-state-paused (markov-chain-gui ws)))))]
-   ;; [(key=? ke "z") (update-gui ws (update-gui-rate (markov-chain-gui ws) (min 10 (+ (gui-state-tick-rate (markov-chain-gui ws)) 1))))]
-   ;; [(key=? ke "x") (update-gui ws (update-gui-rate (markov-chain-gui ws) (max 1 (- (gui-state-tick-rate (markov-chain-gui ws)) 1))))]
+    [(key=? ke "z") (faster ws)]
+    [(key=? ke "x") (slower ws)]
    ;; These change the gui-tick rate. This creates longer notes that sound wrong with the background track right now
     [(key=? ke "h") (show-help ws)]
     [(key=? ke "m") (mute ws)]
@@ -1114,6 +1135,6 @@
 ;; The world state of this big-bang is a markov-chain
 (big-bang initial-chain
           [to-draw draw-handler]
-          [on-tick tick-handler 1/4]
+          [on-tick tick-handler 1/8]
           [on-key key-handler]
           [on-mouse click-handler])
