@@ -367,6 +367,26 @@
                     (normalize-node (append (markov-node-connections node) (list (random)))))
   )
 
+;;Loops through the list of nodes and removes the connection at index from the connections list, then normalize all of the lists
+;;List-of-markov-nodes, Number -> List-of-markov-nodes
+(define (alert-all-nodes-remove lst index)
+  (cond
+    [(empty? lst) '()]
+    [else (cons (node-alert-chain-remove (first lst) index) (alert-all-nodes-remove (rest lst) index))]))
+(check-expect (alert-all-nodes-remove (list (make-markov-node 1 '(0 1))) 0)
+              (list (make-markov-node 1 '(1))))
+(check-expect (alert-all-nodes-remove '() 0)
+              '())
+
+;;Removes a connection from a markov node
+;;Markov-Node, Number -> Markov-Node
+(define (node-alert-chain-remove node index)
+  (make-markov-node (markov-node-midi node)
+                    (normalize-node (remove (list-ref (markov-node-connections node) index) (markov-node-connections node)))))
+(check-expect (node-alert-chain-remove (make-markov-node 1 '(0 1)) 0)
+              (make-markov-node 1 '(1)))
+
+
 ;; Takes a list of connection strengths and returns a normalized list of connection strengths
 ;; connections: a list of numbers between 0.0 and 1.0 that denote the connection strengths of a markov-node to itself and each other markov-node in the list
 ;; List-of-Numbers (whose sum is above 1) -> List-of-Numbers (whose sum is 1)
@@ -386,8 +406,10 @@
 (check-expect (get-normalized (cons 0.4 (cons 0.6 (cons 0.4 (cons 0.6 '())))) 2.0) (cons 0.2 (cons 0.3 (cons 0.2 (cons 0.3 '())))))
 (define (get-normalized connections sum)
   (cond
-    [(empty? connections) '()]
-    [else (cons (/ (first connections) sum) (get-normalized (rest connections) sum))]))
+    [(= sum 0) (map (lambda (x) (/ 1 (length connections))) connections)]
+    [else (cond
+            [(empty? connections) '()]
+            [else (cons (/ (first connections) sum) (get-normalized (rest connections) sum))])]))
 
 
 ;; updates the current-node (index number) of markov-chain to reflect the next node and changes the "active" node (and thus changes which node is lit up on the markov-map)
@@ -461,6 +483,15 @@
 (check-expect (markov-chain=? (make-markov-chain (list (make-markov-node 50 '(0.7 0.3)) (make-markov-node 50 '(0.7 0.3)) (make-markov-node 30 '(0.3 0.7))) 0 starting-gui-state)
                               (make-markov-chain (list (make-markov-node 50 '(0.7 0.3)) (make-markov-node 30 '(0.3 0.7))) 0 starting-gui-state))
               #f)
+
+
+;;Removes a node from the markov chain
+;;Markov-Chain, Node -> Markov-Chain
+(define (remove-node chain index)
+  (cond
+    [(= 1 (length (markov-chain-nodes chain))) chain]
+    [else (make-markov-chain (alert-all-nodes-remove (remove (list-ref (markov-chain-nodes chain) index) (markov-chain-nodes chain)) index) 0 (update-gui-in-help starting-gui-state #f))]))
+
 
 ;;END OF MARKOV CHAIN FUNCTIONS
 
@@ -863,6 +894,7 @@
   (cond
     ;;For the input "." add new random nodes to the chain
     [(key=? ke ".") (add-node-to-chain (make-markov-node (+ 40 (random 40)) (normalize-node (make-random-list (+ 1 (length (markov-chain-nodes ws)))))  ) ws)]
+    [(key=? ke ",") (remove-node ws (gui-state-node-selected (markov-chain-gui ws)))]
     ;;For the left and right arrow keys, adjust the value of the selected connection's weight
     [(key=? ke "left") (change-connection ws (gui-state-node-selected (markov-chain-gui ws)) (gui-state-connection-selected (markov-chain-gui ws)) -.1)]
     [(key=? ke "right") (change-connection ws (gui-state-node-selected (markov-chain-gui ws)) (gui-state-connection-selected (markov-chain-gui ws)) .1)]
@@ -872,6 +904,9 @@
     [(key=? ke "down") (make-markov-chain (markov-chain-nodes ws) (markov-chain-current-node ws)
                                         (update-gui-connection (markov-chain-gui ws) (min (sub1 (length (markov-chain-nodes ws))) (+ (gui-state-connection-selected (markov-chain-gui ws)) 1))))]
     [(key=? ke " ") (update-gui ws (update-gui-paused (markov-chain-gui ws) (not (gui-state-paused (markov-chain-gui ws)))))]
+   ;; [(key=? ke "z") (update-gui ws (update-gui-rate (markov-chain-gui ws) (min 10 (+ (gui-state-tick-rate (markov-chain-gui ws)) 1))))]
+   ;; [(key=? ke "x") (update-gui ws (update-gui-rate (markov-chain-gui ws) (max 1 (- (gui-state-tick-rate (markov-chain-gui ws)) 1))))]
+   ;; These change the gui-tick rate. This creates longer notes that sound wrong with the background track right now
     [(key=? ke "h") (show-help ws)]
     [(key=? ke "m") (mute ws)]
     [(key=? ke "r") (reset ws)]
