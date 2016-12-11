@@ -78,7 +78,7 @@
 (define map-height 600)
 
 ;;The gui-state that the program starts in and will be used for some check-expect type things
-(define starting-gui-state (make-gui-state 0 0 2 0 0.5 #t #f 0))
+(define starting-gui-state (make-gui-state 0 0 4 0 0.5 #t #f 0))
 
 
 ;; the maximum possible length of a note (in ticks) note-length
@@ -113,6 +113,21 @@
 (define vol-slider-width 30)
 ;; the volume slider box
 (define vol-slider (rectangle vol-slider-width vol-slider-height "solid" "black"))
+
+;; the width and height of the tempo rectangle
+(define tempo-bg-height 30)
+(define tempo-bg-width 190)
+;; the tempo background
+(define tempo-bg (rectangle tempo-bg-width tempo-bg-height "solid" "gray"))
+;; the width and height of the tempo slider
+(define tempo-slider-height 25)
+(define tempo-slider-width 30)
+;; the tempo slider box
+(define tempo-slider (rectangle tempo-slider-width tempo-slider-height "solid" "black"))
+
+;; Tempo + and - buttons
+(define tempo+ (place-image (text "+" 24 "black") 25 15 (rectangle 50 30 "solid" "gray")))
+(define tempo- (place-image (text "-" 24 "black") 25 15 (rectangle 50 30 "solid" "gray")))
 
 ;;The list of midi note names in order
 (define midi-names '("C" "C#" "D" "D#" "E" "F" "F#" "G" "G#" "A" "A#" "B"))
@@ -520,6 +535,10 @@
           (draw-ode-button ws)
           (draw-adele-button ws)
           (draw-hbday-button ws)
+          (text "Tempo: " 18 "black")
+          (draw-tempo-slider ws)
+          tempo-
+          tempo+
           help-button
           (draw-paused ws)
           (draw-circles ws 0)
@@ -538,6 +557,10 @@
           (make-posn 1070 260)  ;; ode-button
           (make-posn 1070 300)  ;; adele-button
           (make-posn 1070 340)  ;; hbday-button
+          (make-posn 965 425)   ;; tempo text
+          (make-posn 1100 425)  ;; tempo-slider
+          (make-posn 1065 465)  ;; tempo+
+          (make-posn 1135 465)  ;; tempo-
           (make-posn (- map-width 25) (- map-height 25)) ;; help button
           (make-posn map-center-x map-center-y) ;; Paused indicator
           (make-posn map-center-x map-center-y)  ;; draw-circles
@@ -732,6 +755,20 @@
 (check-expect (draw-vol-slider (make-markov-chain (list (make-markov-node 50 '(0.5 0.5)) (make-markov-node 50 '(0.7 0.3))) 0 starting-gui-state))
               (place-image (rectangle vol-slider-width vol-slider-height "solid" "black") 95 15 vol-bg))
 
+;; draw the tempo slider
+;; markov-chain -> image
+(define (draw-tempo-slider ws)
+  (place-image tempo-slider
+               (cond
+                 [(= (gui-state-tick-rate (markov-chain-gui ws)) 1) tempo-bg-width]
+                 [(= (gui-state-tick-rate (markov-chain-gui ws)) 2) (* 3/4 tempo-bg-width)]
+                 [(= (gui-state-tick-rate (markov-chain-gui ws)) 4) (/ tempo-bg-width 2)]
+                 [(= (gui-state-tick-rate (markov-chain-gui ws)) 6) (/ tempo-bg-width 4)]
+                 [(= (gui-state-tick-rate (markov-chain-gui ws)) 8) 0])
+               (/ tempo-bg-height 2)
+               tempo-bg))
+;;---ADD CHECK EXPECT---
+
 ;; draw the mute-button
 ;; mute-button is:
 ;; - mute-gray, if volume is anything but 0.0
@@ -907,7 +944,7 @@
                                      [(= (gui-state-tick-rate (markov-chain-gui ws)) 8) 8]
                                      [else (+ (gui-state-tick-rate (markov-chain-gui ws)) 2)]))))
                                       
-
+  
 ;; Key Handler
 ;; Adds a random markov-node to the list-of-markov-nodes in the markov-chain when "." is pressed
 ;; Markov-Chain -> Markov-Chain
@@ -995,6 +1032,8 @@
                                       [(and (and (>= x 1005) (<= x 1135)) (and (>= y 205) (<= y 275))) ode]
                                       [(and (and (>= x 1005) (<= x 1135)) (and (>= y 205) (<= y 315))) adele]
                                       [(and (and (>= x 1005) (<= x 1135)) (and (>= y 205) (<= y 355))) hbday]
+                                      [(and (and (>= x 1040) (<= x 1090)) (and (>= y 450) (<= y 480))) (slower ws)]
+                                      [(and (and (>= x 1110) (<= x 1160)) (and (>= y 450) (<= y 480))) (faster ws)]
                                       [(and (and (>= x 1160) (<= x 1190)) (and (>= y 550) (<= y 590))) (show-help ws)]
                                       [(< (get-distance x y (calc-circle-x ws (find-closest x y 0 ws 0)) (calc-circle-y ws (find-closest x y 0 ws 0))) circle-radius)
                                        (update-gui ws (update-gui-node (markov-chain-gui ws) (find-closest x y 0 ws 0)))]
