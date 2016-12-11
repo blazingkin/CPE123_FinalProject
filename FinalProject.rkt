@@ -30,20 +30,17 @@
 ;; World Definitions
 
 
-(define-struct gui-state [node-selected connection-selected tick-rate tick-count volume in-help paused beat-count])
+(define-struct gui-state [node-selected connection-selected tick-rate tick-count volume in-help paused])
 ;;A gui-state is a structure:
 ;; (make-gui-state Number Number Number Number Number Boolean Boolean Number)
 ;; interpretation: A Gui state has:
 ;; - node-selected: an integer corresponding to the index of the selected node
 ;; - connection-selected: the index of the currently selected connection
-;; - tick-rate: the length of the current note in ticks
-;; - tick-count: the current "tick-index" of the note being played
-;;               the tick-count starts at 0 and increments every time the clock ticks
-;;               when tick-count = tick-rate, the current note has finished playing, and tick-count resets to 0
+;; - tick-rate: a number representing how many ticks should occur before a note is queued (affects tempo)
+;; - tick-count: a number representing the total amount of ticks throughout the program
 ;; - volume: a number between 0.0 and 1.0 that reflects the volume of the audio
 ;; - in-help: a boolean that represents whether the help menu should be shown or not
 ;; - paused: a boolean that represents if the program is paused or not
-;; - beat-count: a number that represents when the background track should be queued
 
 (define-struct markov-node [midi connections])
 ;; A markov-node is a structure:
@@ -52,12 +49,13 @@
 ;; - midi: a integer value that corresponds to a MIDI note number
 ;; - connections: a list of connection strengths, where the strengths are numbers between 0.0 and 1.0
 
-(define-struct markov-chain [nodes current-node gui])
+(define-struct markov-chain [nodes current-node previous-node gui])
 ;; A markov-chain is a structure:
 ;;  (make-markov-chain list-of-markov-nodes Number gui-state)
 ;; interpretation: A markov-chain has
 ;; - nodes: a list of markov-nodes in the markov-chain
 ;; - current-node: a integer value corresponding to the current index of the markov-chain list
+;; - previous-node: an integer value corresponding to the previous node's index of the markov-chain list
 ;; - gui: a gui-state
 
 ;;END OF WORLD DEFINITIONS
@@ -78,7 +76,7 @@
 (define map-height 600)
 
 ;;The gui-state that the program starts in and will be used for some check-expect type things
-(define starting-gui-state (make-gui-state 0 0 4 0 0.5 #t #f 0))
+(define starting-gui-state (make-gui-state 0 0 4 0 0.5 #t #f))
 
 
 ;; the maximum possible length of a note (in ticks) note-length
@@ -174,18 +172,15 @@
 
 ;;The text that shows on startup in reverse order of this list
 (define intro-text (list "Click the ? in the bottom right or press H to toggle this help menu."
-                         "Click the reset button or press R to reset the program to its original launch state."
-                         "Click the mute button in the top right or press M to Mute"
-                         "The volume slider is in the top right."
-                         "Some preset songs are available by clicking the buttons on the right or pressing A, S, D or F."
-                         "You can press . to add a new random node."
+                         "Experiment with other features on the right."
+                         "You can press . to add a new random node and , to remove one"
                          "The selected connection will be red, the connection going the other way will be purple."
                          "Use the ↑ and ↓ keys to scroll and the ← and → to change the node's connection strength."
                          "Click any node to select it."
                          "CONTROLS:"
                          " "
                          " "
-                         "and load pre-programmed probabilities to hear how the audio changes."
+                         "remove notes, and load pre-programmed probabilities to hear how the audio changes."
                          "then generates audio based on those probabilities. You can also change those probabilities, add more notes,"
                          "Our program analyzes known music to find the probabilities of one musical note occurring after another,"
                          "If you click anywhere... You'll be brought to the program!!!"
@@ -260,58 +255,51 @@
 ;;Update GUI selection
 ;; gui-state number -> gui-state
 (define (update-gui-node gui newnode)
-  (make-gui-state newnode (gui-state-connection-selected gui) (gui-state-tick-rate gui) (gui-state-tick-count gui) (gui-state-volume gui) (gui-state-in-help gui) (gui-state-paused gui) (gui-state-beat-count gui)))
-(check-expect (update-gui-node (make-gui-state 0 0 2 0 0.5 #t #t 0) 2) (make-gui-state 2 0 2 0 0.5 #t #t 0))
+  (make-gui-state newnode (gui-state-connection-selected gui) (gui-state-tick-rate gui) (gui-state-tick-count gui) (gui-state-volume gui) (gui-state-in-help gui) (gui-state-paused gui)))
+(check-expect (update-gui-node (make-gui-state 0 0 2 0 0.5 #t #t) 2) (make-gui-state 2 0 2 0 0.5 #t #t))
 
 ;;Update GUI connection
 ;; gui-state number -> gui-state
 (define (update-gui-connection gui newcon)
-  (make-gui-state (gui-state-node-selected gui) newcon (gui-state-tick-rate gui) (gui-state-tick-count gui) (gui-state-volume gui) (gui-state-in-help gui) (gui-state-paused gui) (gui-state-beat-count gui)))
-(check-expect (update-gui-connection (make-gui-state 0 0 2 0 0.5 #t #f 0) 3) (make-gui-state 0 3 2 0 0.5 #t #f 0))
+  (make-gui-state (gui-state-node-selected gui) newcon (gui-state-tick-rate gui) (gui-state-tick-count gui) (gui-state-volume gui) (gui-state-in-help gui) (gui-state-paused gui)))
+(check-expect (update-gui-connection (make-gui-state 0 0 2 0 0.5 #t #f) 3) (make-gui-state 0 3 2 0 0.5 #t #f))
 
 ;;Update GUI Tick Rate
 ;; gui-state number -> gui-state
 (define (update-gui-rate gui tickrate)
-  (make-gui-state (gui-state-node-selected gui) (gui-state-connection-selected gui) tickrate (gui-state-tick-count gui) (gui-state-volume gui) (gui-state-in-help gui) (gui-state-paused gui) (gui-state-beat-count gui)))
-(check-expect (update-gui-rate (make-gui-state 0 0 2 0 0.5 #t #f 0) 4) (make-gui-state 0 0 4 0 0.5 #t #f 0))
+  (make-gui-state (gui-state-node-selected gui) (gui-state-connection-selected gui) tickrate (gui-state-tick-count gui) (gui-state-volume gui) (gui-state-in-help gui) (gui-state-paused gui)))
+(check-expect (update-gui-rate (make-gui-state 0 0 2 0 0.5 #t #f) 4) (make-gui-state 0 0 4 0 0.5 #t #f))
 
 ;;Update GUI Tick Count
 ;; gui-state number -> gui-state
 (define (update-gui-tickcount gui tickcount)
-  (make-gui-state (gui-state-node-selected gui) (gui-state-connection-selected gui) (gui-state-tick-rate gui) tickcount (gui-state-volume gui) (gui-state-in-help gui) (gui-state-paused gui) (gui-state-beat-count gui)))
-(check-expect (update-gui-tickcount (make-gui-state 0 0 2 0 0.5 #t #f 0) 1) (make-gui-state 0 0 2 1 0.5 #t #f 0))
+  (make-gui-state (gui-state-node-selected gui) (gui-state-connection-selected gui) (gui-state-tick-rate gui) tickcount (gui-state-volume gui) (gui-state-in-help gui) (gui-state-paused gui)))
+(check-expect (update-gui-tickcount (make-gui-state 0 0 2 0 0.5 #t #f) 1) (make-gui-state 0 0 2 1 0.5 #t #f))
 
 ;;Update GUI Volume
 ;; gui-state number -> gui-state
 (define (update-gui-volume gui volume)
-  (make-gui-state (gui-state-node-selected gui) (gui-state-connection-selected gui) (gui-state-tick-rate gui) (gui-state-tick-count gui) volume (gui-state-in-help gui) (gui-state-paused gui) (gui-state-beat-count gui)))
-(check-expect (update-gui-volume (make-gui-state 0 0 2 0 0.5 #t #f 0) 0.8) (make-gui-state 0 0 2 0 0.8 #t #f 0))
+  (make-gui-state (gui-state-node-selected gui) (gui-state-connection-selected gui) (gui-state-tick-rate gui) (gui-state-tick-count gui) volume (gui-state-in-help gui) (gui-state-paused gui)))
+(check-expect (update-gui-volume (make-gui-state 0 0 2 0 0.5 #t #f) 0.8) (make-gui-state 0 0 2 0 0.8 #t #f))
 
 ;;Update GUI Help Status
 ;; gui-state boolean -> gui-state
 (define (update-gui-in-help gui in-help)
-  (make-gui-state (gui-state-node-selected gui) (gui-state-connection-selected gui) (gui-state-tick-rate gui) (gui-state-tick-count gui) (gui-state-volume gui) in-help (gui-state-paused gui) (gui-state-beat-count gui)))
-(check-expect (update-gui-in-help (make-gui-state 0 0 2 0 0.5 #f #f 0) #t) (make-gui-state 0 0 2 0 0.5 #t #f 0))
+  (make-gui-state (gui-state-node-selected gui) (gui-state-connection-selected gui) (gui-state-tick-rate gui) (gui-state-tick-count gui) (gui-state-volume gui) in-help (gui-state-paused gui)))
+(check-expect (update-gui-in-help (make-gui-state 0 0 2 0 0.5 #f #f) #t) (make-gui-state 0 0 2 0 0.5 #t #f))
 
 ;;Update GUI Paused Status
 ;; gui-state, boolean -> gui-state
 (define (update-gui-paused gui paused)
-    (make-gui-state (gui-state-node-selected gui) (gui-state-connection-selected gui) (gui-state-tick-rate gui) (gui-state-tick-count gui) (gui-state-volume gui) (gui-state-in-help gui) paused (gui-state-beat-count gui)))
-(check-expect (update-gui-paused (make-gui-state 0 0 2 0 0.5 #f #f 0) #t) (make-gui-state 0 0 2 0 0.5 #f #t 0))
-
-;;Update GUI Beat Count Status
-;; gui-state, number -> gui-state
-(define (update-gui-beat-count gui beat)
-    (make-gui-state (gui-state-node-selected gui) (gui-state-connection-selected gui) (gui-state-tick-rate gui) (gui-state-tick-count gui) (gui-state-volume gui) (gui-state-in-help gui) (gui-state-paused gui) beat))
-(check-expect (update-gui-beat-count (make-gui-state 0 0 2 0 0.5 #f #f 0) 1) (make-gui-state 0 0 2 0 0.5 #f #f 1))
-
+    (make-gui-state (gui-state-node-selected gui) (gui-state-connection-selected gui) (gui-state-tick-rate gui) (gui-state-tick-count gui) (gui-state-volume gui) (gui-state-in-help gui) paused))
+(check-expect (update-gui-paused (make-gui-state 0 0 2 0 0.5 #f #f) #t) (make-gui-state 0 0 2 0 0.5 #f #t))
 
 ;;Update GUI
 ;; markov-chain gui-state -> markov-chain
 (define (update-gui chain newgui)
-  (make-markov-chain (markov-chain-nodes chain) (markov-chain-current-node chain) newgui))
-(check-expect (update-gui (make-markov-chain (list (make-markov-node 50 '(0.5 0.5)) (make-markov-node 50 '(0.7 0.3))) 0 starting-gui-state) (make-gui-state 0 3 2 0 0.9 #t #f 0))
-              (make-markov-chain (list (make-markov-node 50 '(0.5 0.5)) (make-markov-node 50 '(0.7 0.3))) 0 (make-gui-state 0 3 2 0 0.9 #t #f 0)))
+  (make-markov-chain (markov-chain-nodes chain) (markov-chain-current-node chain) (markov-chain-previous-node chain) newgui))
+(check-expect (update-gui (make-markov-chain (list (make-markov-node 50 '(0.5 0.5)) (make-markov-node 50 '(0.7 0.3))) 0 0 starting-gui-state) (make-gui-state 0 3 2 0 0.9 #t #f))
+              (make-markov-chain (list (make-markov-node 50 '(0.5 0.5)) (make-markov-node 50 '(0.7 0.3))) 0 0 (make-gui-state 0 3 2 0 0.9 #t #f)))
 
 ;; mute or unmute the volume
 ;; if the volume is already 0.0: change it to 0.5
@@ -321,17 +309,17 @@
   (cond
     [(= (gui-state-volume (markov-chain-gui ws)) 0.0) (update-gui ws (update-gui-volume (markov-chain-gui ws) 0.5))]
     [else (update-gui ws (update-gui-volume (markov-chain-gui ws) 0.0))]))
-(check-expect (mute (make-markov-chain (list (make-markov-node 50 '(0.5 0.5)) (make-markov-node 50 '(0.7 0.3))) 0 (make-gui-state 0 3 2 0 0.9 #t #f 0)))
-                    (make-markov-chain (list (make-markov-node 50 '(0.5 0.5)) (make-markov-node 50 '(0.7 0.3))) 0 (make-gui-state 0 3 2 0 0.0 #t #f 0)))
-(check-expect (mute (make-markov-chain (list (make-markov-node 50 '(0.5 0.5)) (make-markov-node 50 '(0.7 0.3))) 0 (make-gui-state 0 3 2 0 0.0 #t #f 0)))
-                    (make-markov-chain (list (make-markov-node 50 '(0.5 0.5)) (make-markov-node 50 '(0.7 0.3))) 0 (make-gui-state 0 3 2 0 0.5 #t #f 0)))
+(check-expect (mute (make-markov-chain (list (make-markov-node 50 '(0.5 0.5)) (make-markov-node 50 '(0.7 0.3))) 0 0 (make-gui-state 0 3 2 0 0.9 #t #f)))
+                    (make-markov-chain (list (make-markov-node 50 '(0.5 0.5)) (make-markov-node 50 '(0.7 0.3))) 0 0 (make-gui-state 0 3 2 0 0.0 #t #f)))
+(check-expect (mute (make-markov-chain (list (make-markov-node 50 '(0.5 0.5)) (make-markov-node 50 '(0.7 0.3))) 0 0 (make-gui-state 0 3 2 0 0.0 #t #f)))
+                    (make-markov-chain (list (make-markov-node 50 '(0.5 0.5)) (make-markov-node 50 '(0.7 0.3))) 0 0 (make-gui-state 0 3 2 0 0.5 #t #f)))
 
 ;; reset the markov-chain to its initial state upon program launch
 ;; markov-chain -> markov-chain
 (define (reset ws)
   (update-gui initial-chain (update-gui-in-help starting-gui-state #f)))
 (check-expect (reset frosty) (update-gui initial-chain (update-gui-in-help starting-gui-state #f)))
-(check-expect (reset (make-markov-chain (list (make-markov-node 60 '(1))) 0 starting-gui-state)) (update-gui initial-chain (update-gui-in-help starting-gui-state #f)))
+(check-expect (reset (make-markov-chain (list (make-markov-node 60 '(1))) 0 0 starting-gui-state)) (update-gui initial-chain (update-gui-in-help starting-gui-state #f)))
 
 ;; show the help menu
 ;; markov-chain -> markov-chain
@@ -353,13 +341,13 @@
 ;; node: the markov-node to be added
 ;; chain: the markov-chain to add the markov-node to
 ;; markov-node markov-chain -> markov-chain
-(check-expect (add-node-to-chain (make-markov-node 60 '(1)) (make-markov-chain '() 0 starting-gui-state))
-              (make-markov-chain (list (make-markov-node 60 '(1))) 0 starting-gui-state))
-;; Given: (add-node-to-chain (make-markov-node 40 '(0.5 0.5)) (make-markov-chain (list (make-markov-node 60 '(1))) 0 starting-gui-state))
-;; Expect: (make-markov-chain (list (make-markov-node 60 (list 1/(1+random) (random)/(1+random))) (make-markov-node 40 (list 0.5 0.5))) 0 (make-gui-state 0 0 2 0 0.5)) --FIX THIS--
+(check-expect (add-node-to-chain (make-markov-node 60 '(1)) (make-markov-chain '() 0 0 starting-gui-state))
+              (make-markov-chain (list (make-markov-node 60 '(1))) 0 0 starting-gui-state))
+;; Given: (add-node-to-chain (make-markov-node 40 '(0.5 0.5)) (make-markov-chain (list (make-markov-node 60 '(1))) 0 0 starting-gui-state))
+;; Expect: (make-markov-chain (list (make-markov-node 60 (list 1/(1+random) (random)/(1+random))) (make-markov-node 40 (list 0.5 0.5))) 0 0 (make-gui-state 0 0 4 0 0.5 #t #f))
 ;; where random represents the random number between 0 and 1 that is being added as a connection
 (define (add-node-to-chain node chain)
-  (make-markov-chain (append (alert-all-nodes-add (markov-chain-nodes chain)) (list node)) (markov-chain-current-node chain) (markov-chain-gui chain))
+  (make-markov-chain (append (alert-all-nodes-add (markov-chain-nodes chain)) (list node)) (markov-chain-current-node chain) (markov-chain-previous-node chain) (markov-chain-gui chain))
   )
 
 ;; Alert all nodes in list-of-markov-nodes of a new node
@@ -459,10 +447,10 @@
 ;;Connection: The index of the connection to be changed
 ;;Delta: The amount to change it
 ;;Note - This function will never let a connection go below 0
-(check-expect (change-connection (make-markov-chain (list (make-markov-node 50 '(0.7 0.3)) (make-markov-node 30 '(0.4 0.6))) 0 starting-gui-state) 0 1 0.4)
-              (make-markov-chain (list (make-markov-node 50 (list 0.5 0.5)) (make-markov-node 30 (list 0.4 0.6))) 0 starting-gui-state))
-(check-expect (change-connection (make-markov-chain (list (make-markov-node 50 '(0.7 0.3)) (make-markov-node 30 '(0.3 0.7))) 0 starting-gui-state) 1 1 0.2)
-              (make-markov-chain (list (make-markov-node 50 (list 0.7 0.3)) (make-markov-node 30 (list 0.25 0.75))) 0 starting-gui-state))
+(check-expect (change-connection (make-markov-chain (list (make-markov-node 50 '(0.7 0.3)) (make-markov-node 30 '(0.4 0.6))) 0 0 starting-gui-state) 0 1 0.4)
+              (make-markov-chain (list (make-markov-node 50 (list 0.5 0.5)) (make-markov-node 30 (list 0.4 0.6))) 0 0 starting-gui-state))
+(check-expect (change-connection (make-markov-chain (list (make-markov-node 50 '(0.7 0.3)) (make-markov-node 30 '(0.3 0.7))) 0 0 starting-gui-state) 1 1 0.2)
+              (make-markov-chain (list (make-markov-node 50 (list 0.7 0.3)) (make-markov-node 30 (list 0.25 0.75))) 0 0 starting-gui-state))
 (define (change-connection chain node connection delta)
   (make-markov-chain (list-set (markov-chain-nodes chain)
                                node
@@ -471,32 +459,32 @@
                                                 connection
                                                 (max 0 (+ delta (list-ref (markov-node-connections (list-ref (markov-chain-nodes chain) node)) connection)))))
                                ))
-                     (markov-chain-current-node chain) (markov-chain-gui chain)))
+                     (markov-chain-current-node chain) (markov-chain-previous-node chain) (markov-chain-gui chain)))
 
 ;; checks if two markov-chains are exactly equal
 ;; markov-chain markov-chain -> boolean
 (define (markov-chain-exact=? ws wt)
   (equal? ws wt))
-(check-expect (markov-chain-exact=? (make-markov-chain (list (make-markov-node 50 '(0.7 0.3)) (make-markov-node 30 '(0.3 0.7))) 0 starting-gui-state)
-                                    (make-markov-chain (list (make-markov-node 50 '(0.7 0.3)) (make-markov-node 30 '(0.3 0.7))) 0 starting-gui-state))
+(check-expect (markov-chain-exact=? (make-markov-chain (list (make-markov-node 50 '(0.7 0.3)) (make-markov-node 30 '(0.3 0.7))) 0 0 starting-gui-state)
+                                    (make-markov-chain (list (make-markov-node 50 '(0.7 0.3)) (make-markov-node 30 '(0.3 0.7))) 0 0 starting-gui-state))
               #t)
-(check-expect (markov-chain-exact=? (make-markov-chain (list (make-markov-node 50 '(0.7 0.3)) (make-markov-node 50 '(0.7 0.3)) (make-markov-node 30 '(0.3 0.7))) 0 starting-gui-state)
-                                    (make-markov-chain (list (make-markov-node 50 '(0.7 0.3)) (make-markov-node 30 '(0.3 0.7))) 0 starting-gui-state))
+(check-expect (markov-chain-exact=? (make-markov-chain (list (make-markov-node 50 '(0.7 0.3)) (make-markov-node 50 '(0.7 0.3)) (make-markov-node 30 '(0.3 0.7))) 0 0 starting-gui-state)
+                                    (make-markov-chain (list (make-markov-node 50 '(0.7 0.3)) (make-markov-node 30 '(0.3 0.7))) 0 0 starting-gui-state))
               #f)
 
 ;; checks if two markov-chains are equal
-;; only compares markov-nodes of markov-chain, ignores current-node and gui-state
+;; only compares markov-nodes of markov-chain, ignores current-node, previous-node, and gui-state
 ;; markov-chain markov-chain -> boolean
 (define (markov-chain=? ws wt)
   (equal? (markov-chain-nodes ws) (markov-chain-nodes wt)))
-(check-expect (markov-chain=? (make-markov-chain (list (make-markov-node 50 '(0.7 0.3)) (make-markov-node 30 '(0.3 0.7))) 0 starting-gui-state)
-                              (make-markov-chain (list (make-markov-node 50 '(0.7 0.3)) (make-markov-node 30 '(0.3 0.7))) 0 starting-gui-state))
+(check-expect (markov-chain=? (make-markov-chain (list (make-markov-node 50 '(0.7 0.3)) (make-markov-node 30 '(0.3 0.7))) 0 0 starting-gui-state)
+                              (make-markov-chain (list (make-markov-node 50 '(0.7 0.3)) (make-markov-node 30 '(0.3 0.7))) 0 0 starting-gui-state))
               #t)
-(check-expect (markov-chain=? (make-markov-chain (list (make-markov-node 50 '(0.7 0.3)) (make-markov-node 30 '(0.3 0.7))) 0 (make-gui-state 0 0 2 0 0.5 #t #f 0))
-                              (make-markov-chain (list (make-markov-node 50 '(0.7 0.3)) (make-markov-node 30 '(0.3 0.7))) 3 (make-gui-state 2 4 2 0 0.5 #t #f 0)))
+(check-expect (markov-chain=? (make-markov-chain (list (make-markov-node 50 '(0.7 0.3)) (make-markov-node 30 '(0.3 0.7))) 0 1 (make-gui-state 0 0 2 0 0.5 #t #f))
+                              (make-markov-chain (list (make-markov-node 50 '(0.7 0.3)) (make-markov-node 30 '(0.3 0.7))) 3 0 (make-gui-state 2 4 2 0 0.5 #t #f)))
               #t)
-(check-expect (markov-chain=? (make-markov-chain (list (make-markov-node 50 '(0.7 0.3)) (make-markov-node 50 '(0.7 0.3)) (make-markov-node 30 '(0.3 0.7))) 0 starting-gui-state)
-                              (make-markov-chain (list (make-markov-node 50 '(0.7 0.3)) (make-markov-node 30 '(0.3 0.7))) 0 starting-gui-state))
+(check-expect (markov-chain=? (make-markov-chain (list (make-markov-node 50 '(0.7 0.3)) (make-markov-node 50 '(0.7 0.3)) (make-markov-node 30 '(0.3 0.7))) 0 1 starting-gui-state)
+                              (make-markov-chain (list (make-markov-node 50 '(0.7 0.3)) (make-markov-node 30 '(0.3 0.7))) 0 1 starting-gui-state))
               #f)
 
 
@@ -505,7 +493,7 @@
 (define (remove-node chain index)
   (cond
     [(= 1 (length (markov-chain-nodes chain))) chain]
-    [else (make-markov-chain (alert-all-nodes-remove (remove (list-ref (markov-chain-nodes chain) index) (markov-chain-nodes chain)) index) 0 (update-gui-in-help starting-gui-state #f))]))
+    [else (make-markov-chain (alert-all-nodes-remove (remove (list-ref (markov-chain-nodes chain) index) (markov-chain-nodes chain)) index) 0 0 (update-gui-in-help starting-gui-state #f))]))
 
 
 ;;END OF MARKOV CHAIN FUNCTIONS
@@ -640,7 +628,7 @@
 (define (calc-circle-x chain index)
   (+ map-center-x (* map-radius (cos (- (/ (* 2 pi index) (length (markov-chain-nodes chain))) (/ pi 2) ))))
   )
-(check-within (calc-circle-x (make-markov-chain (list (make-markov-node 50 '(0.5 0.5)) (make-markov-node 50 '(0.7 0.3))) 0 starting-gui-state) 1)
+(check-within (calc-circle-x (make-markov-chain (list (make-markov-node 50 '(0.5 0.5)) (make-markov-node 50 '(0.7 0.3))) 0 0 starting-gui-state) 1)
               (+ map-center-x (* map-radius (cos (- (/ (* 2 pi 1) 2) (/ pi 2))))) 1e-8)
 ;; Returns the y-coordinate where the node should be drawn
 ;; chain: a markov-chain
@@ -649,7 +637,7 @@
 (define (calc-circle-y chain index)
   (+ map-center-y (* map-radius (sin (- (/ (* 2 pi index) (length (markov-chain-nodes chain))) (/ pi 2) ))))
   )
-(check-within (calc-circle-y (make-markov-chain (list (make-markov-node 40 '(0.5 0.5)) (make-markov-node 70 '(0.7 0.3))) 0 starting-gui-state) 0)
+(check-within (calc-circle-y (make-markov-chain (list (make-markov-node 40 '(0.5 0.5)) (make-markov-node 70 '(0.7 0.3))) 0 0 starting-gui-state) 0)
               (+ map-center-y (* map-radius (sin (- (/ (* 2 pi 0) 2) (/ pi 2))))) 1e-8)
 
 ;;Get a pen so that our node connection is drawn with the correct thickness
@@ -692,7 +680,7 @@
     [(= index (length (markov-chain-nodes chain))) markov-map]
     [else 
            (place-image
-           (draw-node (= index (markov-chain-current-node chain)) (= index (gui-state-node-selected (markov-chain-gui chain))) (list-ref (markov-chain-nodes chain) index))
+           (draw-node (= index (markov-chain-previous-node chain)) (= index (gui-state-node-selected (markov-chain-gui chain))) (list-ref (markov-chain-nodes chain) index))
            (calc-circle-x chain index)
            (calc-circle-y chain index)
            (draw-circles chain (+ 1 index)))]))
@@ -752,7 +740,7 @@
 ;; markov-chain -> image
 (define (draw-vol-slider ws)
   (place-image vol-slider (* (gui-state-volume (markov-chain-gui ws)) vol-bg-width) (/ vol-bg-height 2) vol-bg))
-(check-expect (draw-vol-slider (make-markov-chain (list (make-markov-node 50 '(0.5 0.5)) (make-markov-node 50 '(0.7 0.3))) 0 starting-gui-state))
+(check-expect (draw-vol-slider (make-markov-chain (list (make-markov-node 50 '(0.5 0.5)) (make-markov-node 50 '(0.7 0.3))) 0 0 starting-gui-state))
               (place-image (rectangle vol-slider-width vol-slider-height "solid" "black") 95 15 vol-bg))
 
 ;; draw the tempo slider
@@ -767,7 +755,10 @@
                  [(= (gui-state-tick-rate (markov-chain-gui ws)) 8) 0])
                (/ tempo-bg-height 2)
                tempo-bg))
-;;---ADD CHECK EXPECT---
+(check-expect (draw-tempo-slider initial-chain)
+              (place-image tempo-slider 95 15 tempo-bg))
+(check-expect (draw-tempo-slider (make-markov-chain (list (make-markov-node 60 (list 1))) 0 0 (make-gui-state 0 0 8 0 0.5 #t #f)))
+              (place-image tempo-slider 0 15 tempo-bg))
 
 ;; draw the mute-button
 ;; mute-button is:
@@ -778,9 +769,9 @@
   (cond
     [(= (gui-state-volume (markov-chain-gui ws)) 0.0) mute-red]
     [else mute-gray]))
-(check-expect (draw-mute-button (make-markov-chain (list (make-markov-node 50 '(0.5 0.5)) (make-markov-node 50 '(0.7 0.3))) 0 (make-gui-state 0 0 2 0 0.5 #t #f 0)))
+(check-expect (draw-mute-button (make-markov-chain (list (make-markov-node 50 '(0.5 0.5)) (make-markov-node 50 '(0.7 0.3))) 0 0 (make-gui-state 0 0 2 0 0.5 #t #f)))
               mute-gray)
-(check-expect (draw-mute-button (make-markov-chain (list (make-markov-node 50 '(0.5 0.5)) (make-markov-node 50 '(0.7 0.3))) 0 (make-gui-state 0 0 2 0 0.0 #t #f 0)))
+(check-expect (draw-mute-button (make-markov-chain (list (make-markov-node 50 '(0.5 0.5)) (make-markov-node 50 '(0.7 0.3))) 0 0 (make-gui-state 0 0 2 0 0.0 #t #f)))
               mute-red)
 
 ;; draw the song buttons
@@ -900,51 +891,29 @@
   [else
    (both
     (cond
-      [(= (modulo (gui-state-beat-count (markov-chain-gui ws)) 8) 0) (pstream-queue p (rs-scale 0.1 background) (pstream-current-frame p))]
+      [(= (modulo (gui-state-tick-count (markov-chain-gui ws)) 8) 0) (pstream-queue p (rs-scale 0.1 background) (pstream-current-frame p))]
       [else (pstream-queue p (silence 1) (pstream-current-frame p))])
     (cond 
-      [(= (modulo (gui-state-beat-count (markov-chain-gui ws)) (gui-state-tick-rate (markov-chain-gui ws))) 0)
+      [(= (modulo (gui-state-tick-count (markov-chain-gui ws)) (gui-state-tick-rate (markov-chain-gui ws))) 0)
    (invboth 
-   (make-markov-chain (markov-chain-nodes ws) (get-next-node ws) (update-gui-beat-count (markov-chain-gui ws) (add1 (gui-state-beat-count (markov-chain-gui ws)))))
+   (make-markov-chain (markov-chain-nodes ws) (get-next-node ws) (markov-chain-current-node ws) (update-gui-tickcount (markov-chain-gui ws) (add1 (gui-state-tick-count (markov-chain-gui ws)))))
    (pstream-queue p
                   (rs-scale (gui-state-volume (markov-chain-gui ws))
                             (synth-note "main"
                                         35
                                         (markov-node-midi (list-ref (markov-chain-nodes ws) (markov-chain-current-node ws)))
-                                        (* (/ FRAME-RATE 5) (gui-state-tick-rate (markov-chain-gui ws)))))
+                                        (round (* (/ FRAME-RATE 8) (gui-state-tick-rate (markov-chain-gui ws))))))
                   (pstream-current-frame p)))]
-      [else (make-markov-chain (markov-chain-nodes ws) (markov-chain-current-node ws) (update-gui-beat-count (markov-chain-gui ws) (add1 (gui-state-beat-count (markov-chain-gui ws)))))])
+      [else (make-markov-chain (markov-chain-nodes ws) (markov-chain-current-node ws) (markov-chain-previous-node ws) (update-gui-tickcount (markov-chain-gui ws) (add1 (gui-state-tick-count (markov-chain-gui ws)))))])
 
    )]))
 
 
 ;;END TICK HANDLER
-
-
-
-
-
-
-
-
-;; Makes Tempo Faster
-;; Markov-Chain -> Markov-Chain
-(define (faster ws)
-  (update-gui ws
-              (update-gui-rate (markov-chain-gui ws)
-                                   (cond
-                                     [(or (= (gui-state-tick-rate (markov-chain-gui ws)) 2) (= (gui-state-tick-rate (markov-chain-gui ws)) 1)) 1]
-                                     [else (- (gui-state-tick-rate (markov-chain-gui ws)) 2)]))))
-;; Makes Tempo Slower
-(define (slower ws)
-  (update-gui ws
-              (update-gui-rate (markov-chain-gui ws)
-                                   (cond
-                                     [(= (gui-state-tick-rate (markov-chain-gui ws)) 1) 2]
-                                     [(= (gui-state-tick-rate (markov-chain-gui ws)) 8) 8]
-                                     [else (+ (gui-state-tick-rate (markov-chain-gui ws)) 2)]))))
                                       
-  
+
+
+
 ;; Key Handler
 ;; Adds a random markov-node to the list-of-markov-nodes in the markov-chain when "." is pressed
 ;; Markov-Chain -> Markov-Chain
@@ -957,24 +926,14 @@
     [(key=? ke "left") (change-connection ws (gui-state-node-selected (markov-chain-gui ws)) (gui-state-connection-selected (markov-chain-gui ws)) -.1)]
     [(key=? ke "right") (change-connection ws (gui-state-node-selected (markov-chain-gui ws)) (gui-state-connection-selected (markov-chain-gui ws)) .1)]
     ;;For the up and down arrow keys, change which node is selected
-    [(key=? ke "up") (make-markov-chain (markov-chain-nodes ws) (markov-chain-current-node ws)
+    [(key=? ke "up") (make-markov-chain (markov-chain-nodes ws) (markov-chain-current-node ws) (markov-chain-previous-node ws)
                                         (update-gui-connection (markov-chain-gui ws) (max 0 (- (gui-state-connection-selected (markov-chain-gui ws)) 1))))]
-    [(key=? ke "down") (make-markov-chain (markov-chain-nodes ws) (markov-chain-current-node ws)
+    [(key=? ke "down") (make-markov-chain (markov-chain-nodes ws) (markov-chain-current-node ws) (markov-chain-previous-node ws)
                                         (update-gui-connection (markov-chain-gui ws) (min (sub1 (length (markov-chain-nodes ws))) (+ (gui-state-connection-selected (markov-chain-gui ws)) 1))))]
     [(key=? ke " ") (update-gui ws (update-gui-paused (markov-chain-gui ws) (not (gui-state-paused (markov-chain-gui ws)))))]
-    [(key=? ke "z") (faster ws)]
-    [(key=? ke "x") (slower ws)]
-   ;; These change the gui-tick rate. This creates longer notes that sound wrong with the background track right now
     [(key=? ke "h") (show-help ws)]
     [(key=? ke "m") (mute ws)]
     [(key=? ke "r") (reset ws)]
-    [(key=? ke "a") frosty]
-    [(key=? ke "s") jingle-bells]
-    [(key=? ke "d") misirlou]
-    [(key=? ke "f") ghostbusters]
-    [(key=? ke "g") ode]
-    [(key=? ke "j") adele]
-    [(key=? ke "k") hbday]
     [else ws])
   )
 
@@ -1005,6 +964,34 @@
 (check-expect (find-closest 0 0 0 initial-chain 0) 5)
 (check-expect (find-closest 400 400 0 initial-chain 0) 4)
 
+;; Makes Tempo Faster (fastest will be 8 notes/second)
+;; Markov-Chain -> Markov-Chain
+(define (faster ws)
+  (update-gui ws
+              (update-gui-rate (markov-chain-gui ws)
+                                   (cond
+                                     [(or (= (gui-state-tick-rate (markov-chain-gui ws)) 2) (= (gui-state-tick-rate (markov-chain-gui ws)) 1)) 1]
+                                     [else (- (gui-state-tick-rate (markov-chain-gui ws)) 2)]))))
+(check-expect (faster initial-chain)
+              (update-gui initial-chain
+                          (update-gui-rate (markov-chain-gui initial-chain) 2)))
+(check-expect (faster (make-markov-chain (list (make-markov-node 54 (list 1))) 0 0 (make-gui-state 0 0 1 0 0.5 #t #t)))
+              (make-markov-chain (list (make-markov-node 54 (list 1))) 0 0 (make-gui-state 0 0 1 0 0.5 #t #t)))
+              
+;; Makes Tempo Slower (slowest will be 1 note/seconds)
+;; Markov-Chain -> Markov-Chain
+(define (slower ws)
+  (update-gui ws
+              (update-gui-rate (markov-chain-gui ws)
+                                   (cond
+                                     [(= (gui-state-tick-rate (markov-chain-gui ws)) 1) 2]
+                                     [(= (gui-state-tick-rate (markov-chain-gui ws)) 8) 8]
+                                     [else (+ (gui-state-tick-rate (markov-chain-gui ws)) 2)]))))
+(check-expect (slower initial-chain)
+              (update-gui initial-chain
+                          (update-gui-rate (markov-chain-gui initial-chain) 6)))
+(check-expect (slower (make-markov-chain (list (make-markov-node 60 (list 1))) 0 0 (make-gui-state 0 0 8 0 0.5 #t #t)))
+              (make-markov-chain (list (make-markov-node 60 (list 1))) 0 0 (make-gui-state 0 0 8 0 0.5 #t #t)))
 
 ;; when the mouse clicks:
 ;; - if it is within the bounds of the volume slider: updates the volume
@@ -1061,7 +1048,7 @@
 (make-markov-node 62 (list 0 0.3 0.15 0.35 0.2 0 ))
 (make-markov-node 64 (list 0 0.3181818181818182 0 0.22727272727272727 0.4090909090909091 0.045454545454545456 ))
 (make-markov-node 67 (list 0 0.25 0 0 0.25 0.5 ))
-) 0 starting-gui-state)
+) 0 0 starting-gui-state)
 )
 
 ;;The frost initial markov-chain
@@ -1078,7 +1065,7 @@
 (make-markov-node 64 (list 0 2/221 15/221 20/221 42/221 8/221 7/221 83/221 6/221 1/221 37/221 ))
 (make-markov-node 65 (list 0 1/98 13/98 3/98 3/49 13/98 13/98 22/49 0 2/49 1/98 ))
 (make-markov-node 67 (list 0 1/136 1/68 1/68 27/136 3/136 11/136 13/136 8/17 3/34 1/136 ))
-) 0 (update-gui-in-help starting-gui-state #f)))
+) 0 0 (update-gui-in-help starting-gui-state #f)))
 
 
 ;;The jingle bells initial markov-chain
@@ -1092,7 +1079,7 @@
 (make-markov-node 65 (list 5/254 6/127 0 0 239/508 61/508 49/254 38/254 ))
 (make-markov-node 69 (list 13/537 17/179 0 0 107/537 235/537 110/537 7/179 ))
 (make-markov-node 72 (list 8/207 1/23 0 0 35/207 25/207 88/207 42/207 ))
-) 0 (update-gui-in-help starting-gui-state #f)))
+) 0 0 (update-gui-in-help starting-gui-state #f)))
 
 ;;The misirlou initial markov-chain
 (define misirlou
@@ -1107,7 +1094,7 @@
 (make-markov-node 68 (list 1/150 1/75 8/75 2/225 11/90 77/450 43/225 149/450 1/90 17/450 ))
 (make-markov-node 69 (list 0 1/73 29/146 0 1/73 1/73 5/146 5/73 87/146 9/146 ))
 (make-markov-node 71 (list 0 2/121 79/363 1/363 14/363 1/33 13/363 19/363 2/121 214/363 ))
-) 0 (update-gui-in-help starting-gui-state #f)))
+) 0 0 (update-gui-in-help starting-gui-state #f)))
 
 ;;The ghostbusters initial markov-chain
 (define ghostbusters
@@ -1123,7 +1110,7 @@
 (make-markov-node 69 (list 0 0 0 3/100 0 29/50 1/20 1/5 1/25 1/25 3/50 ))
 (make-markov-node 71 (list 35/366 1/366 17/183 11/122 12/61 23/366 4/183 5/366 0 58/183 13/122 ))
 (make-markov-node 74 (list 5/37 0 7/111 4/111 0 2/37 7/111 0 0 29/111 43/111 ))
-) 0 (update-gui-in-help starting-gui-state #f)))
+) 0 0 (update-gui-in-help starting-gui-state #f)))
 
 ;;The odetojoy initial markov-chain
 (define ode
@@ -1136,7 +1123,7 @@
 (make-markov-node 64 (list 1/8 0 1/4 1/8 1/8 1/16 5/16 0 ))
 (make-markov-node 65 (list 0 0 0 0 0 5/7 0 2/7 ))
 (make-markov-node 67 (list 0 0 2/5 0 0 0 0 3/5 ))
-) 0 (update-gui-in-help starting-gui-state #f)))
+) 0 0 (update-gui-in-help starting-gui-state #f)))
 
 ;;The adele initial markov-chain
 (define adele
@@ -1150,7 +1137,7 @@
 (make-markov-node 64 (list 0 6/47 5/47 5/47 31/47 0 0 0 0 ))
 (make-markov-node 66 (list 2/147 0 8/147 0 64/147 65/147 1/147 0 1/21 ))
 (make-markov-node 69 (list 0 0 1/54 0 5/9 1/6 2/27 5/27 0 ))
-) 0 (update-gui-in-help starting-gui-state #f)))
+) 0 0 (update-gui-in-help starting-gui-state #f)))
 
 ;;The Happy Birthday initial markov-chain
 (define hbday
@@ -1163,7 +1150,7 @@
 (make-markov-node 69 (list 0 0 0 1 0 0 0 0 ))
 (make-markov-node 70 (list 0 0 0 0 0 1/2 1/2 0 ))
 (make-markov-node 72 (list 0 0 0 0 0 1 0 0 ))
-) 0 (update-gui-in-help starting-gui-state #f)))
+) 0 0 (update-gui-in-help starting-gui-state #f)))
 ;;END OF CHAIN DEFINITIONS
 
 
