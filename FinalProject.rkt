@@ -55,7 +55,7 @@
 1 0 10 #"text-box%\0"
 1 0 32 #"(lib \"text-snipclass.ss\" \"xml\")\0"
 1 0 1 6 #"wxloc\0"
-          0 0 68 0 1 #"\0"
+          0 0 77 0 1 #"\0"
 0 75 1 #"\0"
 0 12 90 -1 90 -1 3 -1 0 1 0 1 0 0 0 0 0 0 0 0 0 0 0 255 255 255 1 -1 0 9
 #"Standard\0"
@@ -256,53 +256,49 @@
 -1 -1 2 1 #"\0"
 0 -1 1 #"\0"
 1.0 0 -1 -1 -1 -1 -1 -1 1 0 0 0 0 0 0 0 0 1.0 1.0 1.0 65 105 225 0 0 0
--1 -1           0 13338 0 17 3 85
+-1 -1 0 1 #"\0"
+0 75 6 #"Menlo\0"
+0.0 12 90 -1 90 -1 3 -1 0 1 0 1 0 0 0.0 0.0 0.0 0.0 0.0 0.0 0 0 0 255
+255 255 1 -1 2 1 #"\0"
+0 -1 1 #"\0"
+1.0 0 -1 -1 -1 -1 -1 -1 0 0 0 0 0 1 0.0 0.0 0.0 0.0 0.0 0.0 0 0 0 255
+255 255 -1 -1 2 1 #"\0"
+0 -1 1 #"\0"
+1.0 0 -1 -1 -1 93 -1 -1 0 1 0 0 0 0 0.0 0.0 0.0 1.0 1.0 1.0 150 0 150 0
+0 0 -1 -1 2 1 #"\0"
+0 -1 1 #"\0"
+1.0 0 -1 -1 93 -1 -1 -1 0 1 0 0 0 0 0.0 0.0 0.0 1.0 1.0 1.0 255 0 0 0 0
+0 -1 -1 2 1 #"\0"
+0 -1 1 #"\0"
+1.0 0 -1 -1 -1 93 -1 -1 0 1 0 0 0 0 0.0 0.0 0.0 1.0 1.0 1.0 0 0 175 0 0
+0 -1 -1 2 1 #"\0"
+0 -1 1 #"\0"
+1.0 0 -1 -1 -1 -1 -1 -1 0 0 0 0 0 0 0.0 0.0 0.0 1.0 1.0 1.0 194 158 31 0
+0 0 -1 -1 2 1 #"\0"
+0 -1 1 #"\0"
+1.0 0 -1 -1 -1 -1 -1 -1 0 0 0 0 0 0 0.0 0.0 0.0 1.0 1.0 1.0 211 72 255 0
+0 0 -1 -1 2 1 #"\0"
+0 -1 1 #"\0"
+1.0 0 -1 -1 -1 -1 -1 -1 0 0 0 0 0 0 0.0 0.0 0.0 1.0 1.0 1.0 0 150 255 0
+0 0 -1 -1 2 1 #"\0"
+0 -1 1 #"\0"
+1.0 0 -1 -1 -1 -1 -1 -1 0 0 0 0 0 0 0.0 0.0 0.0 1.0 1.0 1.0 0 0 0 0 0 0
+-1 -1           0 13301 0 4 3 85
 (
  #";; The first three lines of this file were inserted by DrRacket. The"
  #"y record metadata"
-) 0 0 24 29 1 #"\n"
-0 0 17 3 85
+) 0 0 4 29 1 #"\n"
+0 0 4 3 85
 (
  #";; about the language level of this file in a form that our tools ca"
  #"n easily process."
-) 0 0 24 29 1 #"\n"
-0 0 26 3 7 #"#reader"
-0 0 24 3 1 #"("
-0 0 14 3 3 #"lib"
-0 0 24 3 1 #" "
-0 0 19 3 25 #"\"htdp-advanced-reader.ss\""
-0 0 24 3 1 #" "
-0 0 19 3 6 #"\"lang\""
-0 0 24 3 3 #")(("
-0 0 14 3 7 #"modname"
-0 0 24 3 1 #" "
-0 0 14 3 12 #"FinalProject"
-0 0 24 3 3 #") ("
-0 0 14 3 19 #"read-case-sensitive"
-0 0 24 3 1 #" "
-0 0 21 3 2 #"#t"
-0 0 24 3 3 #") ("
-0 0 14 3 10 #"teachpacks"
-0 0 24 3 6 #" ()) ("
-0 0 14 3 13 #"htdp-settings"
-0 0 24 3 3 #" #("
-0 0 21 3 2 #"#t"
-0 0 24 3 1 #" "
-0 0 14 3 11 #"constructor"
-0 0 24 3 1 #" "
-0 0 14 3 17 #"repeating-decimal"
-0 0 24 3 1 #" "
-0 0 21 3 2 #"#t"
-0 0 24 3 1 #" "
-0 0 21 3 2 #"#t"
-0 0 24 3 1 #" "
-0 0 14 3 4 #"none"
-0 0 24 3 1 #" "
-0 0 21 3 2 #"#f"
-0 0 24 3 4 #" () "
-0 0 21 3 2 #"#f"
-0 0 24 3 3 #")))"
-0 0 24 29 1 #"\n"
+) 0 0 4 29 1 #"\n"
+0 0 4 3 182
+(
+ #"#reader(lib \"htdp-advanced-reader.ss\" \"lang\")((modname FinalProj"
+ #"ect) (read-case-sensitive #t) (teachpacks ()) (htdp-settings #(#t co"
+ #"nstructor repeating-decimal #t #t none #f () #f)))"
+) 0 0 4 29 1 #"\n"
 0 0 17 3 41 #";; Final Project: Markov Audio Generation"
 0 0 24 29 1 #"\n"
 0 0 17 3 33 #";; Team \"I feel like a tater tot\""
@@ -607,11 +603,6 @@
  #";; the markov-map is the graphic interface where all the markov-node"
  #"s can be viewed and adjusted"
 ) 0 0 24 29 1 #"\n"
-0 0 17 3 95
-(
- #";; For now, the markov-map is the red rectangular outline and the nu"
- #"mbers representing the note"
-) 0 0 24 29 1 #"\n"
 0 0 24 3 1 #"("
 0 0 15 3 6 #"define"
 0 0 24 3 1 #" "
@@ -647,13 +638,8 @@
 0 0 21 3 3 #"600"
 0 0 24 3 1 #")"
 0 0 24 29 1 #"\n"
-0 0 17 3 34 #";; the connections-box background "
+0 0 17 3 33 #";; the connections-box background"
 0 0 24 29 1 #"\n"
-0 0 17 3 90
-(
- #";;(define connections-box (rectangle connections-width connections-h"
- #"eight \"solid\" \"blue\"))"
-) 0 0 24 29 1 #"\n"
 0 0 24 3 1 #"("
 0 0 15 3 6 #"define"
 0 0 24 3 1 #" "
@@ -9970,10 +9956,10 @@
 ) 0 0 24 3 1 #")"
 0 0 24 29 1 #"\n"
 0 0 24 29 1 #"\n"
-0 0 17 3 109
+0 0 17 3 106
 (
  #";; the nodes are represented as circles on the markov-map, spaced in"
- #" a larger circle around some center point"
+ #" a larger circle around a center point"
 ) 0 0 24 29 1 #"\n"
 0 0 17 3 82
 (
@@ -13054,7 +13040,7 @@
 0 0 24 29 1 #"\n"
 0 0 24 29 1 #"\n"
 0 0 24 29 1 #"\n"
-0 0 17 3 47 #";; the width and height of the volume rectangle"
+0 0 17 3 48 #";; the width and height of the volume background"
 0 0 24 29 1 #"\n"
 0 0 24 3 1 #"("
 0 0 15 3 6 #"define"
@@ -13145,7 +13131,7 @@
 0 0 24 3 2 #"))"
 0 0 24 29 1 #"\n"
 0 0 24 29 1 #"\n"
-0 0 17 3 46 #";; the width and height of the tempo rectangle"
+0 0 17 3 47 #";; the width and height of the tempo background"
 0 0 24 29 1 #"\n"
 0 0 24 3 1 #"("
 0 0 15 3 6 #"define"
@@ -13426,6 +13412,13 @@
 0 0 24 29 1 #"\n"
 0 0 24 29 1 #"\n"
 0 0 17 3 46 #";; the buttons for the pre-loaded audio tracks"
+0 0 24 29 1 #"\n"
+0 0 17 3 63
+#";; the button is the song name over a rectangle that is either:"
+0 0 24 29 1 #"\n"
+0 0 17 3 34 #";; - gray, when it is not selected"
+0 0 24 29 1 #"\n"
+0 0 17 3 36 #";; - some color, when it is selected"
 0 0 24 29 1 #"\n"
 0 0 24 3 1 #"("
 0 0 15 3 6 #"define"
@@ -13858,7 +13851,7 @@
 0 0 24 3 2 #" ("
 0 0 14 3 11 #"place-image"
 0 0 24 29 1 #"\n"
-0 0 24 3 3 #"  ("
+0 0 24 3 17 #"                ("
 0 0 14 3 4 #"text"
 0 0 24 3 1 #" "
 0 0 19 3 8 #"\"Paused\""
@@ -13868,13 +13861,13 @@
 0 0 19 3 7 #"\"black\""
 0 0 24 3 1 #")"
 0 0 24 29 1 #"\n"
-0 0 24 3 2 #"  "
+0 0 24 3 16 #"                "
 0 0 21 3 3 #"100"
 0 0 24 29 1 #"\n"
-0 0 24 3 2 #"  "
+0 0 24 3 16 #"                "
 0 0 21 3 3 #"100"
 0 0 24 29 1 #"\n"
-0 0 24 3 3 #"  ("
+0 0 24 3 17 #"                ("
 0 0 14 3 9 #"rectangle"
 0 0 24 3 1 #" "
 0 0 21 3 3 #"200"
@@ -13887,6 +13880,12 @@
 0 0 24 3 3 #")))"
 0 0 24 29 1 #"\n"
 0 0 17 3 19 #";; the pause button"
+0 0 24 29 1 #"\n"
+0 0 17 3 30 #";; the pause-button is either:"
+0 0 24 29 1 #"\n"
+0 0 17 3 57 #";; - gray with a pause symbol, while the audio is playing"
+0 0 24 29 1 #"\n"
+0 0 17 3 54 #";; - red with a play symbol, while the audio is paused"
 0 0 24 29 1 #"\n"
 0 0 24 3 1 #"("
 0 0 15 3 6 #"define"
@@ -14096,9 +14095,11 @@
 0 0 24 3 3 #")))"
 0 0 24 29 1 #"\n"
 0 0 24 29 1 #"\n"
-0 0 17 3 62
-#";;The text that shows on startup in reverse order of this list"
-0 0 24 29 1 #"\n"
+0 0 17 3 72
+(
+ #";;The text that shows on the help screen (in reverse order of this l"
+ #"ist)"
+) 0 0 24 29 1 #"\n"
 0 0 24 3 1 #"("
 0 0 15 3 6 #"define"
 0 0 24 3 1 #" "
@@ -14124,9 +14125,7 @@
 0 0 19 3 3 #"can"
 0 0 19 3 1 #" "
 0 0 19 3 5 #"press"
-0 0 19 3 1 #" "
-0 0 19 3 1 #"."
-0 0 19 3 47 #" to add a new random node and , to remove one.\""
+0 0 19 3 49 #" . to add a new random node and , to remove one.\""
 0 0 24 29 1 #"\n"
 0 0 24 3 25 #"                         "
 0 0 19 3 1 #"\""
@@ -14145,22 +14144,18 @@
 0 0 19 3 2 #"to"
 0 0 19 3 1 #" "
 0 0 19 3 6 #"scroll"
-0 0 19 3 1 #" "
-0 0 19 3 3 #"and"
-0 0 19 3 59
+0 0 19 3 63
 (
- #" the \342\206\220 and \342\206\222 to change the node's connection s"
- #"trength.\""
+ #" and the \342\206\220 and \342\206\222 to change the node's connecti"
+ #"on strength.\""
 ) 0 0 24 29 1 #"\n"
 0 0 24 3 25 #"                         "
 0 0 19 3 1 #"\""
 0 0 19 3 5 #"Click"
-0 0 19 3 1 #" "
-0 0 19 3 3 #"any"
-0 0 19 3 71
+0 0 19 3 75
 (
- #" node to select it. The corresponding selected connection will be re"
- #"d.\""
+ #" any node to select it. The corresponding selected connection will b"
+ #"e red.\""
 ) 0 0 24 29 1 #"\n"
 0 0 24 3 25 #"                         "
 0 0 19 3 11 #"\"CONTROLS:\""
@@ -14173,12 +14168,10 @@
 0 0 24 29 1 #"\n"
 0 0 24 3 25 #"                         "
 0 0 19 3 1 #"\""
-0 0 19 3 6 #"remove"
-0 0 19 3 1 #" "
-0 0 19 3 76
+0 0 19 3 83
 (
- #"notes, and load pre-programmed probabilities to hear how the audio c"
- #"hanges.\""
+ #"remove notes, and load pre-programmed probabilities to hear how the "
+ #"audio changes.\""
 ) 0 0 24 29 1 #"\n"
 0 0 24 3 25 #"                         "
 0 0 19 3 1 #"\""
@@ -14191,12 +14184,10 @@
 0 0 19 3 5 #"based"
 0 0 19 3 1 #" "
 0 0 19 3 2 #"on"
-0 0 19 3 1 #" "
-0 0 19 3 5 #"those"
-0 0 19 3 73
+0 0 19 3 79
 (
- #" probabilities. You can also change those probabilities, add more no"
- #"tes,\""
+ #" those probabilities. You can also change those probabilities, add m"
+ #"ore notes,\""
 ) 0 0 24 29 1 #"\n"
 0 0 24 3 25 #"                         "
 0 0 19 3 1 #"\""
@@ -14208,12 +14199,10 @@
 0 0 19 3 1 #" "
 0 0 19 3 5 #"known"
 0 0 19 3 1 #" "
-0 0 19 3 5 #"music"
-0 0 19 3 1 #" "
-0 0 19 3 71
+0 0 19 3 77
 (
- #"to find the probabilities of one musical note occurring after anothe"
- #"r,\""
+ #"music to find the probabilities of one musical note occurring after "
+ #"another,\""
 ) 0 0 24 29 1 #"\n"
 0 0 24 3 25 #"                         "
 0 0 19 3 62
@@ -14224,7 +14213,7 @@
 0 0 24 3 2 #"))"
 0 0 24 29 1 #"\n"
 0 0 24 29 1 #"\n"
-0 0 17 3 39 #";;The widest the connection line can be"
+0 0 17 3 53 #";;The widest the connection line between notes can be"
 0 0 24 29 1 #"\n"
 0 0 24 3 1 #"("
 0 0 15 3 6 #"define"
@@ -14234,7 +14223,7 @@
 0 0 21 3 2 #"10"
 0 0 24 3 1 #")"
 0 0 24 29 1 #"\n"
-0 0 17 3 35 #";;The color of the connection lines"
+0 0 17 3 57 #";;The color of the connection lines that are not selected"
 0 0 24 29 1 #"\n"
 0 0 24 3 1 #"("
 0 0 15 3 6 #"define"
@@ -14715,7 +14704,7 @@
 0 0 24 3 1 #")"
 0 0 24 29 1 #"\n"
 0 0 24 29 1 #"\n"
-0 0 17 3 22 #";;Update GUI selection"
+0 0 17 3 27 #";;Update GUI node selection"
 0 0 24 29 1 #"\n"
 0 0 17 3 32 #";; gui-state number -> gui-state"
 0 0 24 29 1 #"\n"
@@ -16192,7 +16181,7 @@
 0 0 24 3 3 #")))"
 0 0 24 29 1 #"\n"
 0 0 24 29 1 #"\n"
-0 0 17 3 19 #";; pause or unpause"
+0 0 17 3 29 #";; pause or unpause all audio"
 0 0 24 29 1 #"\n"
 0 0 17 3 31 #";; markov-chain -> markov-chain"
 0 0 24 29 1 #"\n"
@@ -16569,16 +16558,17 @@
  #"markov-chain (list (make-markov-node 60 '(1))) 0 0 starting-gui-stat"
  #"e))"
 ) 0 0 24 29 1 #"\n"
-0 0 17 3 179
+0 0 17 3 3 #";; "
+0 0 17 3 177
 (
- #";; Expect: (make-markov-chain (list (make-markov-node 60 (list 1/(1+"
- #"random) (random)/(1+random))) (make-markov-node 40 (list 0.5 0.5))) "
- #"0 0 (make-gui-state 0 0 4 0 0.5 0.1 #t #f))"
+ #" Expect: (make-markov-chain (list (make-markov-node 60 (list 1/(1+ra"
+ #"ndom) (random)/(1+random))) (make-markov-node 40 (list 0.5 0.5))) 0 "
+ #"0 (make-gui-state 0 0 4 0 0.5 0.1 #t #f))"
 ) 0 0 24 29 1 #"\n"
-0 0 17 3 96
+0 0 17 3 97
 (
- #";; where random represents the random number between 0 and 1 that is"
- #" being added as a connection"
+ #";;  where random represents the random number between 0 and 1 that i"
+ #"s being added as a connection"
 ) 0 0 24 29 1 #"\n"
 0 0 24 3 1 #"("
 0 0 15 3 6 #"define"
@@ -16727,10 +16717,10 @@
 0 0 24 3 3 #"  )"
 0 0 24 29 1 #"\n"
 0 0 24 29 1 #"\n"
-0 0 17 3 128
+0 0 17 3 129
 (
  #";;Loops through the list of nodes and removes the connection at inde"
- #"x from the connections list, then normalize all of the lists"
+ #"x from the connections list, then normalizes all of the lists"
 ) 0 0 24 29 1 #"\n"
 0 0 17 3 54 #";;List-of-markov-nodes, Number -> List-of-markov-nodes"
 0 0 24 29 1 #"\n"
@@ -16824,7 +16814,8 @@
 0 0 24 3 3 #"())"
 0 0 24 29 1 #"\n"
 0 0 24 29 1 #"\n"
-0 0 17 3 41 #";;Removes a connection from a markov node"
+0 0 17 3 37 #";;Removes a connection from a markov-"
+0 0 17 3 4 #"node"
 0 0 24 29 1 #"\n"
 0 0 17 3 36 #";;Markov-Node, Number -> Markov-Node"
 0 0 24 29 1 #"\n"
